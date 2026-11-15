@@ -75,7 +75,7 @@ end
 
 AddModRPCHandler(modname, "RevealArea", RevealArea)
 
-local function GetEffectiveCameraDistance()
+local function GetEffectiveCameraDistance(inst)
     local base = 0
 
     if GLOBAL.TheCamera ~= nil then
@@ -87,8 +87,7 @@ local function GetEffectiveCameraDistance()
     end
 
     local extra = 0
-    local player = GLOBAL.ThePlayer
-    local classified = player ~= nil and player.player_classified or nil
+    local classified = inst ~= nil and inst.player_classified or nil
     if classified ~= nil and classified.cameraextramaxdist ~= nil then
         extra = classified.cameraextramaxdist:value() or 0
     end
@@ -110,7 +109,7 @@ local function TryReveal(inst)
 
     -- The server performs authoritative circuit/skill/charge validation.
     -- The client only supplies its current camera-derived reveal radius.
-    local camera_distance = GetEffectiveCameraDistance()
+    local camera_distance = GetEffectiveCameraDistance(inst)
     local radius = math.min(
         MAX_REVEAL_RADIUS,
         math.max(0, (camera_distance - MIN_CAM_DIST) * 0.7)
