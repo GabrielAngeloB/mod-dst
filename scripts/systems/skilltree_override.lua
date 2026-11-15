@@ -1,62 +1,31 @@
-local SKILLTREE_DEFS = require("prefabs/skilltree_defs").SKILLTREE_DEFS
+local skilltree_defs = require("prefabs/skilltree_defs")
+local wx = skilltree_defs ~= nil and skilltree_defs.SKILLTREE_DEFS ~= nil
+    and skilltree_defs.SKILLTREE_DEFS.wx78 or nil
 local L = GLOBAL.L
+local wx_strings = L ~= nil and L.SKILLTREE ~= nil and L.SKILLTREE.WX78 or nil
 
-local wx = SKILLTREE_DEFS.wx78
+local function OverrideSkill(name, title_key, desc_key)
+    local skill = wx ~= nil and wx[name] or nil
+    if skill == nil or wx_strings == nil then
+        return
+    end
 
-
-if wx then
-
-    -- wx.wx78_circuitry_slot_1.title =
-    --     L.SKILLTREE.WX78.WX78_CIRCUITRY_SLOT_1_TITLE
-    -- wx.wx78_circuitry_slot_1.desc =
-    --     L.SKILLTREE.WX78.WX78_CIRCUITRY_SLOT_1_DESC
-
-
-    -- wx.wx78_circuitry_bettercharge.title =
-    --     L.SKILLTREE.WX78.WX78_BETTER_CHARGE_TITLE
-    -- wx.wx78_circuitry_bettercharge.desc =
-    --     L.SKILLTREE.WX78.WX78_BETTER_CHARGE_DESC
-
-
-    wx.wx78_circuitry_betterunplug.title =
-        L.SKILLTREE.WX78.WX78_BETTER_UNPLUG_TITLE
-    wx.wx78_circuitry_betterunplug.desc =
-        L.SKILLTREE.WX78.WX78_BETTER_UNPLUG_DESC
-
-
-    -- wx.wx78_circuitry_alphabuffs_1.title =
-    --     L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_1_TITLE
-    -- wx.wx78_circuitry_alphabuffs_1.desc =
-    --     L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_1_DESC
-
-
-    -- wx.wx78_circuitry_alphabuffs_2.title =
-    --     L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_2_TITLE
-    -- wx.wx78_circuitry_alphabuffs_2.desc =
-    --     L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_2_DESC
-
-
-    -- wx.wx78_circuitry_betabuffs_1.title =
-    --     L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_1_TITLE
-    -- wx.wx78_circuitry_betabuffs_1.desc =
-    --     L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_1_DESC
-
-
-    -- wx.wx78_circuitry_betabuffs_2.title =
-    --     L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_2_TITLE
-    -- wx.wx78_circuitry_betabuffs_2.desc =
-    --     L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_2_DESC
-
-
-    -- wx.wx78_circuitry_gammabuffs_1.title =
-    --     L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_1_TITLE
-    -- wx.wx78_circuitry_gammabuffs_1.desc =
-    --     L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_1_DESC
-
-
-    wx.wx78_circuitry_gammabuffs_2.title =
-        L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_2_TITLE
-    wx.wx78_circuitry_gammabuffs_2.desc =
-        L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_2_DESC
-
+    if wx_strings[title_key] ~= nil then
+        skill.title = wx_strings[title_key]
+    end
+    if wx_strings[desc_key] ~= nil then
+        skill.desc = wx_strings[desc_key]
+    end
 end
+
+OverrideSkill(
+    "wx78_circuitry_betterunplug",
+    "WX78_BETTER_UNPLUG_TITLE",
+    "WX78_BETTER_UNPLUG_DESC"
+)
+
+OverrideSkill(
+    "wx78_circuitry_gammabuffs_2",
+    "WX78_GAMMA_CIRCUIT_BUFFS_2_TITLE",
+    "WX78_GAMMA_CIRCUIT_BUFFS_2_DESC"
+)

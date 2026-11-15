@@ -1,147 +1,110 @@
+local GLOBAL = GLOBAL
 local STRINGS = GLOBAL.STRINGS
 local L = GLOBAL.L
 
-
-
 local scrapbookdata = require("screens/redux/scrapbookdata")
 
---------------------------------------------------------------------
--- SCRAPBOOK RECIPES
---------------------------------------------------------------------
-if GetModConfigData("recipes") ~= false then
-scrapbookdata.wx78module_chess.deps = { "trinket_6", "scandata" }
-
-scrapbookdata.wx78module_nightvision.deps = { "mole", "wormlight", "scandata" }
-
-scrapbookdata.wx78module_light.deps = { "fireflies", "scandata" }
-
-scrapbookdata.wx78module_light2.deps = { "lightbulb", "scandata", "wx78module_light" }
-
-scrapbookdata.wx78module_stacksize.deps = { "wagpunk_bits", "transistor", "scandata" }
-
-scrapbookdata.wx78module_shielding.deps = { "scandata", "armorsnurtleshell" }
-end 
---------------------------------------------------------------------
--- SKILLTREE , 
---------------------------------------------------------------------
--- I Left those commented in case we need to change too it in the future.
-
--- STRINGS.SKILLTREE.WX78.WX78_LUNAR_ALLEGIANCE_LOCK_1_DESC =
---     L.SKILLTREE.WX78.WX78_LUNAR_ALLEGIANCE_LOCK_1_DESC
-
--- STRINGS.SKILLTREE.WX78.WX78_SHADOW_ALLEGIANCE_LOCK_1_DESC =
---   L.SKILLTREE.WX78.WX78_SHADOW_ALLEGIANCE_LOCK_1_DESC
-
--- STRINGS.SKILLTREE.WX78.WX78_CIRCUITRY_SLOT_1_TITLE =
---    L.SKILLTREE.WX78.WX78_CIRCUITRY_SLOT_1_TITLE
-
--- STRINGS.SKILLTREE.WX78.WX78_CIRCUITRY_SLOT_1_DESC =
---    L.SKILLTREE.WX78.WX78_CIRCUITRY_SLOT_1_DESC
-
--- STRINGS.SKILLTREE.WX78.WX78_BETTER_CHARGE_TITLE =
---   L.SKILLTREE.WX78.WX78_BETTER_CHARGE_TITLE
-
--- STRINGS.SKILLTREE.WX78.WX78_BETTER_CHARGE_DESC =
---    L.SKILLTREE.WX78.WX78_BETTER_CHARGE_DESC
-if GetModConfigData("quickplugging") ~= false then
-STRINGS.SKILLTREE.WX78.WX78_BETTER_UNPLUG_TITLE = L.SKILLTREE.WX78.WX78_BETTER_UNPLUG_TITLE
-STRINGS.SKILLTREE.WX78.WX78_BETTER_UNPLUG_DESC = L.SKILLTREE.WX78.WX78_BETTER_UNPLUG_DESC
+local function SetRecipeDependencies(prefab, dependencies)
+    local entry = scrapbookdata ~= nil and scrapbookdata[prefab] or nil
+    if entry ~= nil then
+        entry.deps = dependencies
+    end
 end
--- STRINGS.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_1_TITLE =
---    L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_1_TITLE
 
--- STRINGS.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_1_DESC =
---    L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_1_DESC
+if GetModConfigData("recipes") ~= false then
+    SetRecipeDependencies("wx78module_chess", { "trinket_6", "scandata" })
+    SetRecipeDependencies("wx78module_nightvision", { "mole", "wormlight", "scandata" })
+    SetRecipeDependencies("wx78module_light", { "fireflies", "scandata" })
+    SetRecipeDependencies("wx78module_light2", { "lightbulb", "scandata", "wx78module_light" })
+    SetRecipeDependencies("wx78module_stacksize", { "wagpunk_bits", "transistor", "scandata" })
+    SetRecipeDependencies("wx78module_shielding", { "scandata", "armorsnurtleshell" })
+end
 
--- STRINGS.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_2_TITLE =
---    L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_2_TITLE
+local function GetScrapbookInfo(key)
+    local specialinfo = L ~= nil and L.SCRAPBOOK ~= nil and L.SCRAPBOOK.SPECIALINFO or nil
+    return specialinfo ~= nil and specialinfo[key] or nil
+end
 
--- STRINGS.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_2_DESC =
---    L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_2_DESC
+local function SetScrapbookInfo(key)
+    local destination = STRINGS ~= nil and STRINGS.SCRAPBOOK ~= nil
+        and STRINGS.SCRAPBOOK.SPECIALINFO or nil
+    local value = GetScrapbookInfo(key)
 
--- STRINGS.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_1_TITLE =
---    L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_1_TITLE
+    if destination ~= nil and value ~= nil then
+        destination[key] = value
+    end
+end
 
--- STRINGS.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_1_DESC =
---    L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_1_DESC
+local function SetSkillTreeString(key)
+    local source = L ~= nil and L.SKILLTREE ~= nil and L.SKILLTREE.WX78 or nil
+    local destination = STRINGS ~= nil and STRINGS.SKILLTREE ~= nil
+        and STRINGS.SKILLTREE.WX78 or nil
 
--- STRINGS.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_2_TITLE =
---   L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_2_TITLE
+    if source ~= nil and destination ~= nil and source[key] ~= nil then
+        destination[key] = source[key]
+    end
+end
 
--- STRINGS.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_2_DESC =
---    L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_2_DESC
-
--- STRINGS.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_1_TITLE =
---    L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_1_TITLE
-
--- STRINGS.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_1_DESC =
---    L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_1_DESC
-
-
---------------------------------------------------------------------
--- SCRAPBOOK
---------------------------------------------------------------------
-
+if GetModConfigData("quickplugging") ~= false then
+    SetSkillTreeString("WX78_BETTER_UNPLUG_TITLE")
+    SetSkillTreeString("WX78_BETTER_UNPLUG_DESC")
+end
 
 if GetModConfigData("thermal") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_HEAT = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_HEAT
-
+    SetScrapbookInfo("WX78MODULE_HEAT")
 end
 
 if GetModConfigData("nightvision") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_NIGHTVISION = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_NIGHTVISION
+    SetScrapbookInfo("WX78MODULE_NIGHTVISION")
 end
 
 if GetModConfigData("refrigerant") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_COLD = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_COLD
+    SetScrapbookInfo("WX78MODULE_COLD")
 end
 
 if GetModConfigData("illumination") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_LIGHT = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_LIGHT
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_LIGHT2 = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_LIGHT2
+    SetScrapbookInfo("WX78MODULE_LIGHT")
+    SetScrapbookInfo("WX78MODULE_LIGHT2")
 end
 
-
 if GetModConfigData("chorusbox") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_MUSIC = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_MUSIC
+    SetScrapbookInfo("WX78MODULE_MUSIC")
 end
 
 if GetModConfigData("processing") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_BEE = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_BEE
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXSANITY1 = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXSANITY1
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXSANITY = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXSANITY
-
+    SetScrapbookInfo("WX78MODULE_BEE")
+    SetScrapbookInfo("WX78MODULE_MAXSANITY1")
+    SetScrapbookInfo("WX78MODULE_MAXSANITY")
 end
 
 if GetModConfigData("hardy") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXHEALTH2 = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXHEALTH2
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXHEALTH = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXHEALTH
+    SetScrapbookInfo("WX78MODULE_MAXHEALTH2")
+    SetScrapbookInfo("WX78MODULE_MAXHEALTH")
 end
 
 if GetModConfigData("rangebooster") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_RADAR = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_RADAR
+    SetScrapbookInfo("WX78MODULE_RADAR")
 end
 
 if GetModConfigData("spatializer") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_STACKSIZE = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_STACKSIZE
---Skill tree
-STRINGS.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_2_TITLE = L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_2_TITLE
-STRINGS.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_2_DESC = L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_2_DESC
+    SetScrapbookInfo("WX78MODULE_STACKSIZE")
+    SetSkillTreeString("WX78_GAMMA_CIRCUIT_BUFFS_2_TITLE")
+    SetSkillTreeString("WX78_GAMMA_CIRCUIT_BUFFS_2_DESC")
 end
 
 if GetModConfigData("screech") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_SCREECH = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_SCREECH
+    SetScrapbookInfo("WX78MODULE_SCREECH")
 end
 
 if GetModConfigData("redigestion") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_DIGESTION = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_DIGESTION
+    SetScrapbookInfo("WX78MODULE_DIGESTION")
 end
 
 if GetModConfigData("blocking") ~= false then
-    STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_SHIELDING = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_SHIELDING
+    SetScrapbookInfo("WX78MODULE_SHIELDING")
 end
 
 if GetModConfigData("scans") ~= false then
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_SPIN = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_SPIN
-STRINGS.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXHUNGER1 = L.SCRAPBOOK.SPECIALINFO.WX78MODULE_MAXHUNGER1
+    SetScrapbookInfo("WX78MODULE_SPIN")
+    SetScrapbookInfo("WX78MODULE_MAXHUNGER1")
 end

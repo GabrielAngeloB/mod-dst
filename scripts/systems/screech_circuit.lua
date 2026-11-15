@@ -1,41 +1,42 @@
 local GLOBAL = GLOBAL
-local TUNING = GLOBAL.TUNING
 
 --------------------------------------------------------------------------
 -- WX78 Screech Aggro Fix (GATED BY CIRCUIT CONDITIONS)
--- Only runs if module + skill + charge are active
+-- Only runs if module + skill + charge are active.
 --------------------------------------------------------------------------
 
 local CLEAR_DIST = 25
 local MUST_TAGS = { "_combat" }
 local CANT_TAGS = { "INLIMBO" }
 
--------------------------------------------------------
--- CONDITION GATE
--------------------------------------------------------
 local function CanUseScreechCircuit(wx)
-    if wx == nil or not wx:IsValid() then
-        return false
-    end
-
-    return HasActiveModule(wx, "screech")
+    return wx ~= nil and wx:IsValid()
+        and HasActiveModule(wx, "screech")
         and HasSkill(wx, "wx78_circuitry_gammabuffs_1")
         and HasCharge(wx)
 end
 
--------------------------------------------------------
--- COOLDOWN (ONLY WHEN ACTIVE)
--------------------------------------------------------
-local function ApplyCooldownReduction(wx)
-    TUNING.WX78_SCREECH_COOLDOWN = 10
-end
+-- The vanilla stategraph supplies TUNING.WX78_SCREECH_COOLDOWN when the
+-- ability ends. Shorten that call per WX-78 instead of mutating global TUNING.
+AddComponentPostInit("wx78_abilitycooldowns", function(self)
+    local old_restart = self.RestartAbilityCooldown
+    if old_restart == nil then
+        return
+    end
 
--------------------------------------------------------
--- AGGRO CLEAR
--------------------------------------------------------
+    function self:RestartAbilityCooldown(ability, duration, ...)
+        local player = self.inst
+        if ability == "screech" and type(duration) == "number"
+            and CanUseScreechCircuit(player) then
+            duration = math.min(duration, 10)
+        end
+
+        return old_restart(self, ability, duration, ...)
+    end
+end)
+
 local function ClearNearbyAggro(player)
     local x, y, z = player.Transform:GetWorldPosition()
-
     local ents = GLOBAL.TheSim:FindEntities(
         x, y, z,
         CLEAR_DIST,
@@ -43,17 +44,15 @@ local function ClearNearbyAggro(player)
         CANT_TAGS
     )
 
-    for _, v in ipairs(ents) do
-        if v.components.combat
-        and v.components.combat.target == player then
-            v.components.combat:SetTarget(nil)
+    for _, entity in ipairs(ents) do
+        if entity ~= nil and entity.components ~= nil
+            and entity.components.combat ~= nil
+            and entity.components.combat.target == player then
+            entity.components.combat:SetTarget(nil)
         end
     end
 end
 
--------------------------------------------------------
--- CORE EFFECT
--------------------------------------------------------
 local function StartScreechAggroProtection(inst)
     if inst._screechaggrotask ~= nil then
         inst._screechaggrotask:Cancel()
@@ -65,44 +64,44 @@ local function StartScreechAggroProtection(inst)
     local interval = 0.1
 
     inst._screechaggrotask = inst:DoPeriodicTask(interval, function()
-
         if not inst:IsValid() then
-            return
-        end
-
-        ClearNearbyAggro(inst)
-
-        elapsed = elapsed + interval
-
-        if elapsed >= duration then
             if inst._screechaggrotask ~= nil then
                 inst._screechaggrotask:Cancel()
                 inst._screechaggrotask = nil
             end
+            return
+        end
+
+        if not CanUseScreechCircuit(inst) then
+            if inst._screechaggrotask ~= nil then
+                inst._screechaggrotask:Cancel()
+                inst._screechaggrotask = nil
+            end
+            return
+        end
+
+        ClearNearbyAggro(inst)
+        elapsed = elapsed + interval
+
+        if elapsed >= duration and inst._screechaggrotask ~= nil then
+            inst._screechaggrotask:Cancel()
+            inst._screechaggrotask = nil
         end
     end)
 end
 
--------------------------------------------------------
--- HOOK
--------------------------------------------------------
 AddPlayerPostInit(function(inst)
-    if not GLOBAL.TheWorld.ismastersim then
+    if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim then
         return
     end
 
-    inst:ListenForEvent("newstate", function(inst, data)
-
-        -- HARD GATE: if conditions fail, NOTHING HAPPENS
-        if not CanUseScreechCircuit(inst) then
+    inst:ListenForEvent("newstate", function(player, data)
+        if not CanUseScreechCircuit(player) then
             return
         end
 
-        -- only now we apply effects
-        ApplyCooldownReduction(inst)
-
         if data ~= nil and data.statename == "wx_screech_pre" then
-            StartScreechAggroProtection(inst)
+            StartScreechAggroProtection(player)
         end
     end)
 end)

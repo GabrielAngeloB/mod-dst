@@ -1,37 +1,28 @@
 local GLOBAL = GLOBAL
-
+local TUNING = GLOBAL.TUNING
 local MATERIAL_SCANDATA = "scandata"
+local ACTIONS = GLOBAL.ACTIONS
 
--------------------------------------------------------------------
--- SKILL CHECK
--------------------------------------------------------------------
 local function HasSkill(inst, skill)
-    return inst
-        and inst.components
-        and inst.components.skilltreeupdater
-        and inst.components.skilltreeupdater:IsActivated(skill)
+    local skilltree = inst ~= nil and inst.components ~= nil
+        and inst.components.skilltreeupdater or nil
+
+    return skilltree ~= nil
+        and skilltree:IsActivated(skill)
+        or false
 end
 
-local function CANREPAIR(wx)
-    if wx == nil or not wx:IsValid() then
-        return false
-    end
-
-    return HasSkill(wx, "wx78_circuitry_betterunplug")
+local function CanRepair(wx)
+    return wx ~= nil and wx:IsValid()
+        and HasSkill(wx, "wx78_circuitry_betterunplug")
 end
 
--------------------------------------------------------------------
--- VALOR DE REPARACIÓN
--------------------------------------------------------------------
 local function GetRepairValue()
     return math.max((TUNING.WX78_MODULE_USES or 0) * 0.25, 0)
 end
 
--------------------------------------------------------------------
--- SCANDATA: REPAIR ITEM (RIGHT CLICK FUNCTION)
--------------------------------------------------------------------
 AddPrefabPostInit("scandata", function(inst)
-    if not TheWorld.ismastersim then
+    if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim then
         return
     end
 
@@ -40,34 +31,22 @@ AddPrefabPostInit("scandata", function(inst)
     end
 
     local repairer = inst.components.repairer
-
     repairer.repairmaterial = MATERIAL_SCANDATA
     repairer.repairaction = ACTIONS.REPAIR
     repairer.finiteusesrepairvalue = GetRepairValue()
-
-    -- Hace que el sistema lo reconozca correctamente como material válido
     repairer.strong = true
 end)
 
--------------------------------------------------------------------
--- HABILITAR ACCIÓN REPAIR SOLO SI TIENE LA SKILL
--------------------------------------------------------------------
 AddComponentAction("USEITEM", "repairer", function(inst, doer, target, actions)
-    if inst ~= nil
-        and inst.prefab == "scandata"
-        and doer ~= nil
-        and doer.prefab == "wx78"
-        and CANREPAIR(doer)
-    then
+    if inst ~= nil and inst.prefab == "scandata"
+        and doer ~= nil and doer.prefab == "wx78"
+        and CanRepair(doer) then
         table.insert(actions, ACTIONS.REPAIR)
     end
 end)
 
--------------------------------------------------------------------
--- MÓDULOS WX-78: REPAIR
--------------------------------------------------------------------
 local function PatchModule(inst)
-    if not TheWorld.ismastersim then
+    if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim then
         return
     end
 
@@ -76,18 +55,22 @@ local function PatchModule(inst)
     end
 
     local repairable = inst.components.repairable
-
     repairable.repairmaterial = MATERIAL_SCANDATA
     repairable.repairaction = ACTIONS.REPAIR
 
-    repairable.onrepaired = function(inst)
-        local owner = inst.components.upgrademodule
-            and inst.components.upgrademodule.target
+    local old_onrepaired = repairable.onrepaired
+    repairable.onrepaired = function(module, ...)
+        if old_onrepaired ~= nil then
+            old_onrepaired(module, ...)
+        end
 
-        if owner
-            and owner.components
-            and owner.components.upgrademoduleowner
-        then
+        local upgrade = module.components ~= nil
+            and module.components.upgrademodule or nil
+        local owner = upgrade ~= nil and upgrade.target or nil
+
+        if owner ~= nil and owner:IsValid()
+            and owner.components ~= nil
+            and owner.components.upgrademoduleowner ~= nil then
             owner.components.upgrademoduleowner:UpdateActivatedModules()
         end
     end
@@ -97,53 +80,24 @@ local function PatchModule(inst)
     end
 end
 
--------------------------------------------------------------------
--- APLICAR A TODOS LOS MÓDULOS WX-78
--------------------------------------------------------------------
 local moduledefs = require("wx78_moduledefs").module_definitions
-
 for _, def in ipairs(moduledefs) do
     AddPrefabPostInit("wx78module_" .. def.name, PatchModule)
 end
--------------------------------------------------------------------
--- Circuit Extractor Break down modules
--------------------------------------------------------------------
-
-GLOBAL.setmetatable(env,{
-    __index = function(t,k)
-        return GLOBAL.rawget(GLOBAL,k)
-    end
-})
-
--------------------------------------------------------------------
--- SKILL CHECK
--------------------------------------------------------------------
 
 local function CanDismantle(wx)
-    if wx == nil or not wx:IsValid() then
-        return false
-    end
-
-    return HasSkill(wx, "wx78_circuitry_betterunplug")
+    return CanRepair(wx)
 end
 
--------------------------------------------------------------------
--- PREFAB INIT
--------------------------------------------------------------------
-
 AddPrefabPostInit("wx78_moduleremover", function(inst)
-    if not TheWorld.ismastersim then
+    if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim then
         return
     end
 
-    if not inst.components.wx_data_extractor then
+    if inst.components.wx_data_extractor == nil then
         inst:AddComponent("wx_data_extractor")
     end
 end)
-
--------------------------------------------------------------------
--- ACTION
--------------------------------------------------------------------
 
 local BREAK_DOWN_MODULE = Action({
     priority = 4,
@@ -152,163 +106,122 @@ local BREAK_DOWN_MODULE = Action({
 
 BREAK_DOWN_MODULE.id = "BREAK_DOWN_MODULE"
 BREAK_DOWN_MODULE.str = GLOBAL.L.ACTION.DISMANTLER
-
 AddAction(BREAK_DOWN_MODULE)
 
 BREAK_DOWN_MODULE.fn = function(act)
-
     local extractor = act.invobject
     local target = act.target
     local doer = act.doer
 
-    -- Bloquea la acción si no tiene la skill
     if not CanDismantle(doer) then
         return false
     end
 
-    if extractor
-    and extractor.components.wx_data_extractor
-    and target
-    and target.components.upgrademodule then
+    local component = extractor ~= nil and extractor.components ~= nil
+        and extractor.components.wx_data_extractor or nil
+    local upgrade = target ~= nil and target.components ~= nil
+        and target.components.upgrademodule or nil
 
-        return extractor.components.wx_data_extractor:BreakDown(
-            target,
-            doer
-        )
+    if component == nil or upgrade == nil then
+        return false
     end
 
-    return false
+    return component:BreakDown(target, doer)
 end
 
--------------------------------------------------------------------
--- RIGHT CLICK PICKER
--------------------------------------------------------------------
-
-AddComponentAction("USEITEM", "wx_data_extractor",
-function(inst, doer, target, actions, right)
-
-    if not right then
+AddComponentAction("USEITEM", "wx_data_extractor", function(inst, doer, target, actions, right)
+    if not right or not CanDismantle(doer) or doer == nil
+        or not doer:HasTag("upgrademoduleowner")
+        or target == nil or target.prefab == nil then
         return
     end
 
-  
-    if not CanDismantle(doer) then
-        return
-    end
-
-    if doer
-        and doer:HasTag("upgrademoduleowner")
-        and target
-        and target.prefab
-        and target.prefab:find("wx78module_") then
-
+    if string.find(target.prefab, "wx78module_", 1, true) == 1 then
         table.insert(actions, ACTIONS.BREAK_DOWN_MODULE)
     end
 end)
 
--------------------------------------------------------------------
--- STATEGRAPH
--------------------------------------------------------------------
-
 AddStategraphActionHandler(
     "wilson",
-    ActionHandler(
-        BREAK_DOWN_MODULE,
-        "dolongaction"
-    )
+    ActionHandler(BREAK_DOWN_MODULE, "dolongaction")
 )
-
 AddStategraphActionHandler(
     "wilson_client",
-    ActionHandler(
-        BREAK_DOWN_MODULE,
-        "dolongaction"
-    )
+    ActionHandler(BREAK_DOWN_MODULE, "dolongaction")
 )
----------------------------------------------------------------------------------------------
----------------------------------------------------------------------------------------------
 
-local function FasterunplugCircuit(wx)
-    if wx == nil or not wx:IsValid() then
-        return false
-    end
-
-    return HasSkill(wx, "wx78_circuitry_betterunplug")
+local function FasterUnplugCircuit(wx)
+    return CanRepair(wx)
 end
 
--------------------------------------------------------
--- STATEGRAPH PATCH
--------------------------------------------------------
-AddStategraphPostInit("wilson", function(sg)
-
-    -------------------------------------------------------
-    -- CONFIG
-    -------------------------------------------------------
+local function PatchQuickPlugStategraph(sg)
     local REMOVE_SPEED = 1.5
     local INSERT_SPEED = 1.5
 
-    -------------------------------------------------------
-    -- SAFE ANIMATION SPEED
-    -------------------------------------------------------
     local function SetSpeed(inst, speed)
         if inst ~= nil and inst.AnimState ~= nil then
+            local state = inst.sg ~= nil and inst.sg.statemem or nil
+            if state ~= nil and state.dwx78_quickplug_original_speed == nil then
+                local getter = inst.AnimState.GetDeltaTimeMultiplier
+                state.dwx78_quickplug_original_speed =
+                    type(getter) == "function" and getter(inst.AnimState) or 1
+            end
             inst.AnimState:SetDeltaTimeMultiplier(speed)
         end
     end
 
     local function ResetSpeed(inst)
-        if inst ~= nil and inst.AnimState ~= nil then
-            inst.AnimState:SetDeltaTimeMultiplier(1)
-        end
-    end
-
-    -------------------------------------------------------
-    -- WRAPPER SAFE
-    -------------------------------------------------------
-    local function wrap(state, speed)
-        if sg.states[state] == nil then
+        if inst == nil or inst.AnimState == nil then
             return
         end
 
-        local old_onenter = sg.states[state].onenter
-        sg.states[state].onenter = function(inst, ...)
+        local state = inst.sg ~= nil and inst.sg.statemem or nil
+        local original = state ~= nil and state.dwx78_quickplug_original_speed or nil
+        inst.AnimState:SetDeltaTimeMultiplier(original or 1)
 
-            -- with skill
-            if FasterunplugCircuit(inst) then
+        if state ~= nil then
+            state.dwx78_quickplug_original_speed = nil
+        end
+    end
+
+    local function Wrap(state_name, speed)
+        local state = sg.states[state_name]
+        if state == nil then
+            return
+        end
+
+        local old_onenter = state.onenter
+        state.onenter = function(inst, ...)
+            if FasterUnplugCircuit(inst) then
                 SetSpeed(inst, speed)
             end
 
-            if old_onenter then
+            if old_onenter ~= nil then
                 return old_onenter(inst, ...)
             end
         end
 
-        local old_onexit = sg.states[state].onexit
-        sg.states[state].onexit = function(inst, ...)
-
-            --reset without skill
-            if FasterunplugCircuit(inst) then
+        local old_onexit = state.onexit
+        state.onexit = function(inst, ...)
+            -- Always restore if this wrapper changed the animation speed.
+            local state_mem = inst.sg ~= nil and inst.sg.statemem or nil
+            if state_mem ~= nil and state_mem.dwx78_quickplug_original_speed ~= nil then
                 ResetSpeed(inst)
             end
 
-            if old_onexit then
+            if old_onexit ~= nil then
                 return old_onexit(inst, ...)
             end
         end
     end
 
-    -------------------------------------------------------
-    -- REMOVE (más rápido)
-    -------------------------------------------------------
-    wrap("start_removing_module", REMOVE_SPEED)
-    wrap("removing_module", REMOVE_SPEED)
-    wrap("unplug_module", REMOVE_SPEED)
+    Wrap("start_removing_module", REMOVE_SPEED)
+    Wrap("removing_module", REMOVE_SPEED)
+    Wrap("unplug_module", REMOVE_SPEED)
+    Wrap("start_plugging_module", INSERT_SPEED)
+    Wrap("plugging_module", INSERT_SPEED)
+    Wrap("plug_module", INSERT_SPEED)
+end
 
-    -------------------------------------------------------
-    -- INSERT
-    -------------------------------------------------------
-    wrap("start_plugging_module", INSERT_SPEED)
-    wrap("plugging_module", INSERT_SPEED)
-    wrap("plug_module", INSERT_SPEED)
-
-end)
+AddStategraphPostInit("wilson", PatchQuickPlugStategraph)
+AddStategraphPostInit("wilson_client", PatchQuickPlugStategraph)
