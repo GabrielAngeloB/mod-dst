@@ -95,7 +95,7 @@ AddPlayerPostInit(function(inst)
         end
         -- The cooldown tuning is configured once at mod load.
 
-if data ~= nil and data.statename == "wx_screech_pre" then
+        if data ~= nil and data.statename == "wx_screech_pre" then
             StartScreechAggroProtection(inst)
         end
     end)

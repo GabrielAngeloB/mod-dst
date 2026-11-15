@@ -105,9 +105,11 @@ local function UpdateOverheat(inst)
 
     local heatmods = GetHeatModules(inst)
 
-    if heatmods >= 2 then
+    if heatmods >= 2 and HasHeatSkill(inst) then
         temp:SetOverheatHurtRate(TUNING.WILSON_HEALTH / 60)
     else
+        -- Keep the default single-module/no-module rate when the skill or
+        -- circuit requirements are not active.
         temp:SetOverheatHurtRate(TUNING.WILSON_HEALTH / 120)
     end
 end
@@ -175,7 +177,7 @@ local function StartHeatController(inst)
 
         if time_since <= HEAT_HOLD_TIME then
             if temp.current > HEAT_TARGET then
-                temp.current = HEAT_TARGET
+                temp:SetTemperature(HEAT_TARGET)
             end
         else
             -- SOLO enfriar si el calor viene del sistema de módulos
