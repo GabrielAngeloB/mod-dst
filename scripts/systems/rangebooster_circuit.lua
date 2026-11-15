@@ -93,10 +93,14 @@ local function GetEffectiveCameraDistance()
         extra = classified.cameraextramaxdist:value() or 0
     end
 
-    -- Preserve the original cave compensation: the cave camera is more
-    -- constrained, but the radar circuit should still reveal a useful ring.
-    local cave_bonus = IsCaveWorld() and 10 or 0
-    return math.max(MIN_CAM_DIST, base + extra + cave_bonus)
+    -- Match the original cave behavior: clamp the camera to the surface
+    -- minimum first, then add the cave compensation.
+    local result = math.max(MIN_CAM_DIST, base + extra)
+    if IsCaveWorld() then
+        result = result + 10
+    end
+
+    return result
 end
 
 local function TryReveal(inst)
