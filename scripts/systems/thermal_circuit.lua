@@ -1,0 +1,298 @@
+
+
+local GLOBAL = GLOBAL
+local TUNING = GLOBAL.TUNING
+----------------THERMAL CIRCUIT CHANGES: START------------
+-------------------------------------------------------------------
+--                              CONFIG
+-------------------------------------------------------------------
+local HEAT_TARGET = 71
+local DAMAGE_TEMP = 65
+local HEAT_HOLD_TIME = 1.5
+
+local HEAT_PER_MODULE = 7
+local COOLING_PER_SECOND = 0.35
+
+-------------------------------------------------------------------
+--                            MODULES / SKILL 
+-------------------------------------------------------------------
+local function GetHeatModules(inst)
+    local owner = inst.components.upgrademoduleowner
+    if owner == nil then
+        return 0
+    end
+
+    local count = owner:GetModuleTypeCount("heat")
+
+    if count <= 0
+        or not HasActiveModule(inst, "heat")
+        or not HasCharge(inst) then
+        return 0
+    end
+
+    return count
+end
+
+local function HasHeatSkill(inst)
+    return HasSkill(inst, "wx78_circuitry_betabuffs_1")
+end
+
+-------------------------------------------------------------------
+--                              SPEECH
+-------------------------------------------------------------------
+local function UpdateHeatSpeech(inst)
+    local temp = inst.components.temperature
+    if temp == nil then return end
+
+    local heatmods = GetHeatModules(inst)
+
+    if heatmods <= 0 or not HasHeatSkill(inst) then
+        inst._wx_overclock_state = false
+        return
+    end
+
+    local is_overclock = temp.current >= DAMAGE_TEMP
+
+    if is_overclock and not inst._wx_overclock_state then
+        inst._wx_overclock_state = true
+        if inst.components.talker then
+            inst.components.talker:Say(GLOBAL.L.SPEECH.OVERCLOCK_ON)
+        end
+    end
+
+    if not is_overclock and inst._wx_overclock_state then
+        inst._wx_overclock_state = false
+        if inst.components.talker then
+            inst.components.talker:Say(GLOBAL.L.SPEECH.OVERCLOCK_OFF)
+        end
+    end
+end
+
+-------------------------------------------------------------------
+--                      DAMAGE
+-------------------------------------------------------------------
+local DAMAGE_MODIFIER_KEY = "dwx78_thermal_overheat"
+
+local function UpdateDamage(inst)
+    local combat = inst.components.combat
+    local temp = inst.components.temperature
+    if combat == nil or temp == nil or combat.externaldamagemultipliers == nil then
+        return
+    end
+
+    local heatmods = GetHeatModules(inst)
+    local multiplier = 1
+
+    if heatmods > 0 and HasHeatSkill(inst) and temp.current >= DAMAGE_TEMP then
+        multiplier = heatmods >= 2 and 1.50 or 1.25
+    end
+
+    -- Use a keyed SourceModifierList entry instead of overwriting the shared
+    -- combat.damagemultiplier field, so other mods' damage bonuses survive.
+    if multiplier > 1 then
+        combat.externaldamagemultipliers:SetModifier(inst, multiplier, DAMAGE_MODIFIER_KEY)
+    else
+        combat.externaldamagemultipliers:RemoveModifier(inst, DAMAGE_MODIFIER_KEY)
+    end
+end
+
+-------------------------------------------------------------------
+--                  OVERHEAT DAMAGE
+-------------------------------------------------------------------
+local function UpdateOverheat(inst)
+    local temp = inst.components.temperature
+    if temp == nil then return end
+
+    local heatmods = GetHeatModules(inst)
+
+    if heatmods >= 2 then
+        temp:SetOverheatHurtRate(TUNING.WILSON_HEALTH / 60)
+    else
+        temp:SetOverheatHurtRate(TUNING.WILSON_HEALTH / 120)
+    end
+end
+
+-------------------------------------------------------------------
+--                      ATTACK HEAT
+-------------------------------------------------------------------
+local function AddAttackHeat(inst)
+    local temp = inst.components.temperature
+    if temp == nil then return end
+
+    local heatmods = GetHeatModules(inst)
+    if heatmods <= 0 then return end
+
+    inst._wx_last_attack_time = GLOBAL.GetTime()
+
+    local gain = HEAT_PER_MODULE * heatmods
+
+    -- marcar fuente del calor (IMPORTANTE)
+    inst._wx_module_heat = gain
+
+    if temp.current >= HEAT_TARGET then
+        temp.current = HEAT_TARGET
+        return
+    end
+
+    local new_temp = temp.current + gain
+
+    if new_temp >= HEAT_TARGET then
+        temp.current = HEAT_TARGET
+    else
+        temp:DoDelta(gain)
+    end
+end
+
+-------------------------------------------------------------------
+--                  HEAT CONTROLLER
+-------------------------------------------------------------------
+local function StartHeatController(inst)
+    if inst._wx_heat_task ~= nil then return end
+
+    inst._wx_heat_task = inst:DoPeriodicTask(0.1, function ()
+        local temp = inst.components.temperature
+        if temp == nil then return end
+
+        local heatmods = GetHeatModules(inst)
+
+        if not HasHeatSkill(inst) or heatmods <= 0 then
+            UpdateDamage(inst)
+            UpdateHeatSpeech(inst)
+            return
+        end
+
+        -- init tracking
+        inst._wx_last_temp = inst._wx_last_temp or temp.current
+        inst._wx_heat_rising = inst._wx_heat_rising or false
+        inst._wx_module_heat = inst._wx_module_heat or 0
+
+        -- detect temperature trend
+        if temp.current > inst._wx_last_temp then
+            inst._wx_heat_rising = true
+        elseif temp.current < inst._wx_last_temp then
+            inst._wx_heat_rising = false
+        end
+
+        inst._wx_last_temp = temp.current
+
+        local last = inst._wx_last_attack_time or 0
+        local time_since = GLOBAL.GetTime() - last
+
+        if time_since <= HEAT_HOLD_TIME then
+            if temp.current > HEAT_TARGET then
+                temp.current = HEAT_TARGET
+            end
+        else
+            -- SOLO enfriar si el calor viene del sistema de módulos
+            if inst._wx_module_heat and inst._wx_module_heat > 0 then
+                if not inst._wx_heat_rising then
+                    local decay = COOLING_PER_SECOND
+
+                    temp.current = math.max(0, temp.current - decay)
+
+                    -- reducir “carga de calor de módulos”
+                    inst._wx_module_heat = math.max(0, inst._wx_module_heat - decay)
+                end
+            end
+        end
+
+        -- stop controller if fully cold
+        if temp.current <= 0 then
+            temp.current = 0
+
+            if inst._wx_heat_task ~= nil then
+                inst._wx_heat_task:Cancel()
+                inst._wx_heat_task = nil
+            end
+
+            return
+        end
+
+        UpdateDamage(inst)
+        UpdateHeatSpeech(inst)
+    end)
+end
+
+-------------------------------------------------------------------
+--                      ATTACK EVENT
+-------------------------------------------------------------------
+local function OnAttack(inst)
+    if not HasHeatSkill(inst) then return end
+    if GetHeatModules(inst) <= 0 then return end
+
+    AddAttackHeat(inst)
+end
+
+-------------------------------------------------------------------
+--                      HOOK
+-------------------------------------------------------------------
+local function Hook(inst)
+    if inst._wx_heat_hooked then return end
+    inst._wx_heat_hooked = true
+
+    inst:ListenForEvent("onattackother", function ()
+        OnAttack(inst)
+    end)
+
+    StartHeatController(inst)
+
+    inst:DoPeriodicTask(0.5, function ()
+        UpdateDamage(inst)
+        UpdateOverheat(inst)
+        UpdateHeatSpeech(inst)
+    end)
+end
+----------------THERMAL CIRCUIT CHANGES: END------------
+-------------------------------------------------------------------
+--                      INIT
+-------------------------------------------------------------------
+AddPrefabPostInit("wx78", function(inst)
+    if not GLOBAL.TheNet:GetIsServer() then return end
+
+    inst:DoTaskInTime(0, function ()
+        Hook(inst)
+    end)
+end)
+
+
+AddComponentPostInit("inventoryitemtemperature", function(self)
+
+    local old_UpdateTemperature = self.UpdateTemperature
+
+    function self:UpdateTemperature(dt)
+
+        local item = self.inst
+
+        local owner = item.components.inventoryitem ~= nil
+            and item.components.inventoryitem.owner
+            or nil
+
+        if owner ~= nil
+            and owner.components.inventory ~= nil
+            and item.components.fumaroletool ~= nil
+            and owner.components.inventory:GetEquippedItem(EQUIPSLOTS.HANDS) == item then
+
+            local heatmods = 0
+
+            if owner.prefab == "wx78" then
+                heatmods = GetHeatModules(owner)
+            end
+
+            if heatmods > 0 then
+                local heat_rate = 0.25 * heatmods
+                -- 1 módulo = 0.3
+                -- 2 módulos = 0.6
+
+                self:SetTemperature(math.min(
+                    self.temperature + heat_rate * dt,
+                    self.maxtemp or TUNING.MAX_ENTITY_TEMP
+                ))
+
+                return true
+            end
+        end
+
+        return old_UpdateTemperature(self, dt)
+    end
+
+end)
