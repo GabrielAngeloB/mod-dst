@@ -1,47 +1,25 @@
 --------------------------------------------------------------------------
 -- CIRCUIT RESONANCE - SHARED DEFINITIONS
 --
--- Pure data + tiny helpers. This file is loaded with `require` on the
--- server (engine/effects) AND on clients (HUD), so it must never depend on
--- the mod environment (no HasActiveModule, no GetModConfigData, ...).
---
--- To add/rebalance a resonance:
---   1. add its numbers to M.TUNING
---   2. add an entry to M.RESONANCES (unique id + unique bit, never reuse a bit)
---   3. implement it in resonance/wx_resonance_effects.lua (same id)
---   4. add its texts to RESONANCE.ENTRIES in all stringlocalization_*.lua
+-- This module is loaded on both server and clients. Keep it data-oriented:
+-- no mod configuration reads and no server-only entity operations here.
 --------------------------------------------------------------------------
 
-local GLOBAL = GLOBAL or _G
-local global_pcall = GLOBAL.pcall
-local global_table = GLOBAL.table
-local unpack = GLOBAL.unpack or (global_table ~= nil and global_table.unpack or nil)
-
+local GLOBAL = GLOBAL
 local M = {}
 
---------------------------------------------------------------------------
--- CIRCUIT FAMILIES
---
--- A family is "online" when at least ONE of its modules is plugged in AND
--- activated (powered), the player owns the skill that enables that circuit's
--- effect in this mod, and WX-78 has charge. Skills/config keys mirror the
--- gating already used by each circuit file (noted on the right).
---------------------------------------------------------------------------
 M.CIRCUITS = {
-    thermal        = { modules = { "heat" },                   skill = "wx78_circuitry_betabuffs_1",  config = "thermal"      }, -- thermal_circuit.lua
-    refrigerant    = { modules = { "cold" },                   skill = "wx78_circuitry_betabuffs_1",  config = "refrigerant"  }, -- refrigerant_circuit.lua
-    sonic          = { modules = { "screech" },                skill = "wx78_circuitry_gammabuffs_1", config = "screech"      }, -- screech_circuit.lua
-    chorusbox      = { modules = { "music" },                  skill = "wx78_circuitry_betabuffs_1",  config = "chorusbox"    }, -- chorusbox_circuit.lua
-    optoelectronic = { modules = { "nightvision" },            skill = "wx78_circuitry_betabuffs_1",  config = "nightvision"  }, -- nightvision_circuit.lua
-    rangebooster   = { modules = { "radar" },                  skill = "wx78_circuitry_betabuffs_1",  config = "rangebooster" }, -- rangebooster_circuit.lua
-    blocking       = { modules = { "shielding" },              skill = "wx78_circuitry_gammabuffs_2", config = "blocking"     }, -- blocking_circuit.lua
-    hardy          = { modules = { "maxhealth", "maxhealth2" }, skill = "wx78_circuitry_alphabuffs_1", config = "hardy"        }, -- hardy_circuit.lua
-    illumination   = { modules = { "light", "light2" },        skill = "wx78_circuitry_betabuffs_2",  config = "illumination" }, -- ilumination_circuit.lua
+    thermal        = { modules = { "heat" },                   skill = "wx78_circuitry_betabuffs_1",  config = "thermal"      },
+    refrigerant    = { modules = { "cold" },                   skill = "wx78_circuitry_betabuffs_1",  config = "refrigerant"  },
+    sonic          = { modules = { "screech" },                skill = "wx78_circuitry_gammabuffs_1", config = "screech"      },
+    chorusbox      = { modules = { "music" },                  skill = "wx78_circuitry_betabuffs_1",  config = "chorusbox"    },
+    optoelectronic = { modules = { "nightvision" },            skill = "wx78_circuitry_betabuffs_1",  config = "nightvision"  },
+    rangebooster   = { modules = { "radar" },                  skill = "wx78_circuitry_betabuffs_1",  config = "rangebooster" },
+    blocking       = { modules = { "shielding" },              skill = "wx78_circuitry_gammabuffs_2", config = "blocking"     },
+    hardy          = { modules = { "maxhealth", "maxhealth2" }, skill = "wx78_circuitry_alphabuffs_1", config = "hardy"        },
+    illumination   = { modules = { "light", "light2" },         skill = "wx78_circuitry_betabuffs_2",  config = "illumination" },
 }
 
---------------------------------------------------------------------------
--- TUNING (single source of truth: effects AND displayed texts use these)
---------------------------------------------------------------------------
 M.TUNING = {
     thermal_equilibrium = { HEAL_PER_SECOND = 0.3, TICK = 0.5 },
     sonic_harmony       = { SELF_SANITY = 2, ALLY_SANITY = 1, ALLY_RADIUS = 12, COOLDOWN = 15 },
@@ -57,11 +35,6 @@ local function pct(x)
     return math.floor(x * 100 + 0.5)
 end
 
---------------------------------------------------------------------------
--- RESONANCES
---   bit    : position in the network bitmask (0..15). NEVER reuse/renumber.
---   values : numbers injected (in order) into the %s of the localized texts.
---------------------------------------------------------------------------
 M.RESONANCES = {
     {
         id = "thermal_equilibrium", bit = 0, circuits = { "thermal", "refrigerant" },
@@ -92,24 +65,19 @@ M.RESONANCES = {
     },
 }
 
---------------------------------------------------------------------------
--- AVAILABILITY (respects the per-circuit config toggles of the mod)
---------------------------------------------------------------------------
 function M.GetAvailable(is_enabled)
     local list = {}
     for _, res in ipairs(M.RESONANCES) do
-        local a = M.CIRCUITS[res.circuits[1]]
-        local b = M.CIRCUITS[res.circuits[2]]
-        if is_enabled(a.config) and is_enabled(b.config) then
+        local first = M.CIRCUITS[res.circuits[1]]
+        local second = M.CIRCUITS[res.circuits[2]]
+        if first ~= nil and second ~= nil
+            and is_enabled(first.config) and is_enabled(second.config) then
             list[#list + 1] = res
         end
     end
     return list
 end
 
---------------------------------------------------------------------------
--- NETWORK BITMASK (no bit library: plain arithmetic)
---------------------------------------------------------------------------
 function M.EncodeMask(active)
     local mask = 0
     for _, res in ipairs(M.RESONANCES) do
@@ -124,40 +92,40 @@ function M.IsInMask(mask, res)
     return math.floor((mask or 0) / math.floor(2 ^ res.bit)) % 2 == 1
 end
 
---------------------------------------------------------------------------
--- TEXTS
---------------------------------------------------------------------------
 function M.GetStrings()
-    local L = GLOBAL.rawget(GLOBAL, "L")
-    if L ~= nil and L.RESONANCE ~= nil then
-        return L.RESONANCE
-    end
-
-    local ok, en = global_pcall(require, "stringlocalization_en")
-    if ok and type(en) == "table" and en.RESONANCE ~= nil then
-        return en.RESONANCE
-    end
-
-    return {}
+    local strings = GLOBAL.L
+    return strings ~= nil and strings.RESONANCE or {}
 end
 
--- field: "NAME" | "SHORT" | "DESC"
+-- Replaces only the %s placeholders used by the translations. Escaped %% is
+-- preserved as a literal percent sign without relying on unpack or pcall.
 function M.GetText(res, field)
     local strings = M.GetStrings()
-    local entry = strings.ENTRIES ~= nil and strings.ENTRIES[res.id] or nil
-    local fmt = entry ~= nil and entry[field] or nil
+    local entries = strings.ENTRIES
+    local entry = entries ~= nil and entries[res.id] or nil
+    local formatted = entry ~= nil and entry[field] or nil
 
-    if fmt == nil then
+    if formatted == nil then
         return res.id
     end
 
-    local ok, text = global_pcall(GLOBAL.string.format, fmt, unpack(res.values))
-    return ok and text or fmt
+    local marker = string.char(1)
+    local text = formatted:gsub("%%%%", marker)
+    local index = 0
+    text = text:gsub("%%s", function()
+        index = index + 1
+        local value = res.values ~= nil and res.values[index] or ""
+        return value
+    end)
+
+    return text:gsub(marker, function()
+        return "%"
+    end)
 end
 
 function M.GetCircuitName(key)
     local strings = M.GetStrings()
-    return (strings.CIRCUITS ~= nil and strings.CIRCUITS[key]) or key
+    return strings.CIRCUITS ~= nil and strings.CIRCUITS[key] or key
 end
 
 return M

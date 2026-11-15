@@ -1,22 +1,10 @@
 --------------------------------------------------------------------------
 -- CIRCUIT RESONANCE - HUD PANEL (client)
---
--- Small panel that lists the active resonances and their effects. It reads
--- the bitmask replicated by the server (owner._wx_resonance_mask) and only
--- rebuilds its texts when that mask changes. Hidden when nothing is active.
---
--- If it overlaps another HUD element in your setup, tweak the layout
--- constants below, or disable it with the "Resonance HUD" mod option.
 --------------------------------------------------------------------------
-
 local Widget = require("widgets/widget")
 local Text = require("widgets/text")
-local GLOBAL = GLOBAL or _G
-local global_pcall = GLOBAL.pcall
-local global_tostring = GLOBAL.tostring
 local Defs = require("resonance/wx_resonance_defs")
 
--- Layout (screen units, anchored to the top-left corner of the screen)
 local OFFSET_X = 110
 local OFFSET_Y = -40
 local WIDTH = 300
@@ -34,8 +22,6 @@ local COLOUR_TITLE = { 0.7, 0.7, 0.7, 0.85 }
 local COLOUR_NAME = { 0.45, 0.85, 1, 1 }
 local COLOUR_DESC = { 0.88, 0.88, 0.88, 0.95 }
 
--- Rough number of text lines the description will wrap into (no font metrics
--- are available here): CJK glyphs are about twice as wide as latin ones.
 local function EstimateLines(str)
     local is_cjk = str:find("[\227-\233]") ~= nil
     local chars = is_cjk and math.ceil(#str / 3) or #str
@@ -85,7 +71,6 @@ function WXResonancePanel:GetEntry(res)
     return entry
 end
 
--- Places a left-aligned text so its top edge sits `top` units below the panel origin.
 local function PlaceText(text, top, height)
     text:SetRegionSize(WIDTH, height)
     text:SetPosition(WIDTH / 2, -(top + height / 2), 0)
@@ -138,14 +123,7 @@ function WXResonancePanel:OnUpdate(dt)
 
     if mask ~= self.shown_mask then
         self.shown_mask = mask
-
-        local ok, err = global_pcall(self.Refresh, self, mask)
-        if not ok then
-            -- Stop updating instead of erroring every frame.
-            print("[WX-78 Resonance] HUD panel stopped: " .. global_tostring(err))
-            self:Hide()
-            self:StopUpdating()
-        end
+        self:Refresh(mask)
     end
 end
 

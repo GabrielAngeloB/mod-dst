@@ -1,23 +1,28 @@
 local TUNING = GLOBAL.TUNING
 
+-- The current WX-78 module implementation reads this nested tuning value.
+-- Keep a stronger value supplied by another mod instead of lowering it.
+local wx_tuning = TUNING.SKILLS ~= nil and TUNING.SKILLS.WX78 or nil
+if wx_tuning ~= nil then
+    wx_tuning.BEE_SHIELD_REGEN_PER_SECOND = math.max(
+        wx_tuning.BEE_SHIELD_REGEN_PER_SECOND or 0,
+        0.5
+    )
+end
 
--- Moistened Nutribrick
-TUNING.WX78_FOODBRICK_NUTRIENTS = {16, 16, 0}
-
-local defs = require("prefabs/fertilizer_nutrient_defs").FERTILIZER_DEFS
-defs.wx78_foodbrick.nutrients = {16, 16, 0}
-
-----------------BEANBOOSTER CIRCUIT CHANGES: START-------------
--- BEANBOOSTER CIRCUIT: allow charging during combat but blocked if HP is not full + Now regenerate shield faster
-----------------------------------------------------------------
-TUNING.BEE_SHIELD_REGEN_PER_SECOND = 0.5
-AddComponentPostInit("wx78_shield", function (self)
+-- Beanbooster: allow shield charging during combat, but not while WX-78 is hurt.
+AddComponentPostInit("wx78_shield", function(self)
     local function IsHurt(inst)
-        return inst.components.health and inst.components.health:IsHurt() or false
+        return inst ~= nil
+            and inst.components ~= nil
+            and inst.components.health ~= nil
+            and inst.components.health:IsHurt()
+            or false
     end
 
     function self:UpdateCanShieldCharge()
-        self.canshieldcharge = self.updating and self.currentshield < self.maxshield and not IsHurt(self.inst)
+        self.canshieldcharge = self.updating
+            and self.currentshield < self.maxshield
+            and not IsHurt(self.inst)
     end
 end)
-------------------BEANBOOSTER CIRCUIT CHANGES: END-------------
