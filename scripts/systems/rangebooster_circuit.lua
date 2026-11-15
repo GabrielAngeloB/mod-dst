@@ -6,6 +6,10 @@ local MAX_REVEAL_POINTS = 72
 local SERVER_REQUEST_INTERVAL = 0.5
 local TWO_PI = GLOBAL.PI2 or (2 * math.pi)
 
+local function IsCaveWorld()
+    return GLOBAL.TheWorld ~= nil and GLOBAL.TheWorld:HasTag("cave")
+end
+
 local function CanRevealForPlayer(player)
     return player ~= nil
         and player:IsValid()
@@ -89,7 +93,10 @@ local function GetEffectiveCameraDistance()
         extra = classified.cameraextramaxdist:value() or 0
     end
 
-    return math.max(MIN_CAM_DIST, base + extra)
+    -- Preserve the original cave compensation: the cave camera is more
+    -- constrained, but the radar circuit should still reveal a useful ring.
+    local cave_bonus = IsCaveWorld() and 10 or 0
+    return math.max(MIN_CAM_DIST, base + extra + cave_bonus)
 end
 
 local function TryReveal(inst)

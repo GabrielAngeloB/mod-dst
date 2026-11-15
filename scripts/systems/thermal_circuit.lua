@@ -78,7 +78,9 @@ local function UpdateOverheat(inst)
     end
 
     local heatmods = GetHeatModules(inst)
-    if heatmods > 0 and HasHeatSkill(inst) then
+    -- Preserve the original circuit behavior: module count affects the
+    -- overheat hurt rate even before the Beta skill unlocks attack overclock.
+    if heatmods > 0 then
         local rate = heatmods >= 2
             and TUNING.WILSON_HEALTH / 60
             or TUNING.WILSON_HEALTH / 120

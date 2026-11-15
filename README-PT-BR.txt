@@ -5,8 +5,9 @@ REVISÃO DE COMPATIBILIDADE
 - Corrigida a chave do TUNING usada pela regeneração de escudo do Beanbooster.
 - Redigestion agora calcula módulos de digestão realmente ativados, em vez de
   depender de uma variável nunca preenchida.
-- Range Booster agora valida no servidor o WX-78, o circuito, a habilidade,
-  a carga, o raio e a frequência das solicitações de revelação do mapa.
+- Range Booster valida no servidor o WX-78, o circuito, a habilidade, a carga,
+  o raio e a frequência das solicitações de revelação do mapa. A compensação
+  original de alcance nas Cavernas foi preservada.
 - As chamadas frágeis a GLOBAL.pcall/GLOBAL.tostring foram removidas da
   implementação da Ressonância.
 - O controlador Thermal não encerra mais definitivamente quando a temperatura
@@ -19,6 +20,8 @@ REVISÃO DE COMPATIBILIDADE
 - Illumination tenta preservar os parâmetros de luz originais antes de aplicar
   o visual do circuito.
 - Blocking remove heavybody apenas quando foi o próprio mod que adicionou a tag.
+- O bônus de recarga do escudo de Blocking é aplicado individualmente ao WX-78,
+  sem alterar o cooldown global de outros jogadores.
 
 INSTALAÇÃO LOCAL
 1. Feche o DST.

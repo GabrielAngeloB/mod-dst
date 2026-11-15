@@ -16,8 +16,7 @@ AddComponentPostInit("armor", function(self)
                 and item.components.inventoryitem.owner or nil
 
             if owner ~= nil and owner.prefab == "wx78"
-                and HasSkill(owner, "wx78_circuitry_alphabuffs_1")
-                and HasCharge(owner) then
+                and HasSkill(owner, "wx78_circuitry_alphabuffs_1") then
                 local small_modules = GetActiveModuleCount(owner, "maxhealth")
                 local big_modules = GetActiveModuleCount(owner, "maxhealth2")
 

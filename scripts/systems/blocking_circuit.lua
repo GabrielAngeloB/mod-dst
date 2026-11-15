@@ -56,11 +56,25 @@ local function CanUseBlockingCircuit(wx)
         and HasCharge(wx)
 end
 
-local function ApplyShieldingCooldownReduction()
-    -- This is a game-wide TUNING value in the current WX-78 implementation;
-    -- it cannot be changed per player through the public component API.
-    TUNING.WX78_SHIELDING_COOLDOWN = 10
-end
+-- The vanilla stategraph reads the global cooldown TUNING when shield mode
+-- ends. Override the component method instead so the reduction is per WX-78
+-- and never shortens another player's shielding cooldown.
+AddComponentPostInit("wx78_abilitycooldowns", function(self)
+    local old_restart = self.RestartAbilityCooldown
+    if old_restart == nil then
+        return
+    end
+
+    function self:RestartAbilityCooldown(ability, duration, ...)
+        local player = self.inst
+        if ability == "shielding" and type(duration) == "number"
+            and CanUseBlockingCircuit(player) then
+            duration = math.min(duration, 10)
+        end
+
+        return old_restart(self, ability, duration, ...)
+    end
+end)
 
 local function ApplyBlockingTags(inst)
     if not inst:HasTag("heavybody") then
@@ -103,12 +117,6 @@ AddPrefabPostInit("wx78", function(inst)
     if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim then
         return
     end
-
-    inst:ListenForEvent("newstate", function()
-        if CanUseBlockingCircuit(inst) then
-            ApplyShieldingCooldownReduction()
-        end
-    end)
 
     inst:DoPeriodicTask(0.5, function()
         if not CanUseBlockingCircuit(inst) then
