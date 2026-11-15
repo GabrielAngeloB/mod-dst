@@ -23,6 +23,21 @@ local global_pcall = GLOBAL.pcall
 local global_tostring = GLOBAL.tostring
 local Defs = require("resonance/wx_resonance_defs")
 
+local function ProtectedCall(fn, ...)
+    if type(global_pcall) == "function" then
+        return global_pcall(fn, ...)
+    end
+    return true, fn(...)
+end
+
+local function ErrorString(err)
+    if type(err) == "string" then
+        return err
+    end
+    return type(global_tostring) == "function"
+        and global_tostring(err) or "<unavailable error details>"
+end
+
 local EVAL_PERIOD = 0.5          -- seconds between requirement checks (same cadence as other circuits)
 local QUIET_AFTER_SPAWN = 5      -- no speech right after spawning/loading (modules are still powering up)
 local SPEECH_DEBOUNCE = 3        -- minimum seconds between two messages about the same resonance
@@ -80,7 +95,10 @@ local function AppendScrapbook()
     end
 end
 
-global_pcall(AppendScrapbook)
+local scrapbook_ok, scrapbook_err = ProtectedCall(AppendScrapbook)
+if not scrapbook_ok then
+    print("[WX-78 Resonance] Scrapbook update failed: " .. ErrorString(scrapbook_err))
+end
 
 --------------------------------------------------------------------------
 -- SERVER LOGIC
@@ -159,9 +177,9 @@ local function Announce(inst, res, active)
 end
 
 local function SafeCall(fn, inst, res, action)
-    local ok, err = global_pcall(fn, inst)
+    local ok, err = ProtectedCall(fn, inst)
     if not ok then
-        print("[WX-78 Resonance] error while trying to " .. action .. " '" .. res.id .. "': " .. global_tostring(err))
+        print("[WX-78 Resonance] error while trying to " .. action .. " '" .. res.id .. "': " .. ErrorString(err))
     end
 end
 
@@ -237,12 +255,12 @@ if GetModConfigData("resonance_hud") ~= false then
         end
 
         -- A UI problem must never take the HUD (or the game) down: worst case the panel is skipped.
-        local ok, err = global_pcall(function()
+        local ok, err = ProtectedCall(function()
             local ResonancePanel = require("widgets/wx_resonance_panel")
             self.wx_resonance_panel = self:AddChild(ResonancePanel(self.owner))
         end)
         if not ok then
-            print("[WX-78 Resonance] HUD panel disabled: " .. global_tostring(err))
+            print("[WX-78 Resonance] HUD panel disabled: " .. ErrorString(err))
         end
     end)
 end

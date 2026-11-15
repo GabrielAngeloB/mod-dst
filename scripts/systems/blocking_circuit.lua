@@ -9,6 +9,8 @@ local tonumber = GLOBAL.tonumber or function(v) return type(v) == "number" and v
 -- ============================================================
 ----------------------------------------------------------------
 TUNING.WX78_SHIELDING_ARMOR = 0
+-- Global cooldown tuning is configured once when this option is loaded.
+TUNING.WX78_SHIELDING_COOLDOWN = 10
 
 local function IsWXBlocking(inst)
     return inst ~= nil and inst.prefab == "wx78" and inst:HasTag("wx_shielding")
@@ -56,16 +58,18 @@ local function CanUseBlockingCircuit(wx)
     return HasActiveModule(wx, "shielding") and HasSkill(wx, "wx78_circuitry_gammabuffs_2") and HasCharge(wx)
 end
 
-local function ApplyShieldingCooldownReduction()
-    TUNING.WX78_SHIELDING_COOLDOWN = 10
-end
-
 local function ApplyBlockingTags(inst)
-    if not inst:HasTag("heavybody") then inst:AddTag("heavybody") end
+    if not inst:HasTag("heavybody") then
+        inst:AddTag("heavybody")
+        inst._dwx78_added_heavybody = true
+    end
 end
 
 local function RemoveBlockingTags(inst)
-    if inst:HasTag("heavybody") then inst:RemoveTag("heavybody") end
+    if inst._dwx78_added_heavybody and inst:HasTag("heavybody") then
+        inst:RemoveTag("heavybody")
+    end
+    inst._dwx78_added_heavybody = nil
 end
 
 
@@ -114,14 +118,7 @@ AddPrefabPostInit("wx78", function(inst)
         return
     end
 
-    -- Evento para a redução de cooldown do Shield
-    inst:ListenForEvent("newstate", function(inst, data)
-        if CanUseBlockingCircuit(inst) then
-            ApplyShieldingCooldownReduction()
-        end
-    end)
-
-    -- Loop de checagem física (Roda a cada 0.5s)
+-- Loop de checagem física (Roda a cada 0.5s)
     inst:DoPeriodicTask(0.5, function()
         
         -- 1. Gerencia as tags de peso do Shielding

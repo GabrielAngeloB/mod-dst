@@ -22,7 +22,7 @@ local function GetHeatModules(inst)
         return 0
     end
 
-    local count = owner:GetModuleTypeCount("heat")
+    local count = GetActiveModuleCount(inst, "heat")
 
     if count <= 0
         or not HasActiveModule(inst, "heat")
@@ -126,21 +126,16 @@ local function AddAttackHeat(inst)
 
     local gain = HEAT_PER_MODULE * heatmods
 
-    -- marcar fuente del calor (IMPORTANTE)
-    inst._wx_module_heat = gain
+    -- Use the temperature component API and track the heat actually applied.
+    local before = temp.current
+    temp:DoDelta(gain)
 
-    if temp.current >= HEAT_TARGET then
-        temp.current = HEAT_TARGET
-        return
+    if temp.current > HEAT_TARGET then
+        temp:SetTemperature(HEAT_TARGET)
     end
 
-    local new_temp = temp.current + gain
-
-    if new_temp >= HEAT_TARGET then
-        temp.current = HEAT_TARGET
-    else
-        temp:DoDelta(gain)
-    end
+    local applied_heat = math.max(0, temp.current - before)
+    inst._wx_module_heat = (inst._wx_module_heat or 0) + applied_heat
 end
 
 -------------------------------------------------------------------
@@ -188,24 +183,20 @@ local function StartHeatController(inst)
                 if not inst._wx_heat_rising then
                     local decay = COOLING_PER_SECOND
 
-                    temp.current = math.max(0, temp.current - decay)
+                    local actual_decay = math.min(decay, math.max(0, temp.current))
+                    temp:DoDelta(-actual_decay, true)
 
-                    -- reducir “carga de calor de módulos”
-                    inst._wx_module_heat = math.max(0, inst._wx_module_heat - decay)
+                    -- Reduce only the heat contributed by this circuit.
+                    inst._wx_module_heat = math.max(0, inst._wx_module_heat - actual_decay)
                 end
             end
         end
 
-        -- stop controller if fully cold
+        -- Keep the controller alive at 0°C so later attacks can add heat
+        -- without requiring a second initialization.
         if temp.current <= 0 then
-            temp.current = 0
-
-            if inst._wx_heat_task ~= nil then
-                inst._wx_heat_task:Cancel()
-                inst._wx_heat_task = nil
-            end
-
-            return
+            temp:SetTemperature(0)
+            inst._wx_module_heat = 0
         end
 
         UpdateDamage(inst)

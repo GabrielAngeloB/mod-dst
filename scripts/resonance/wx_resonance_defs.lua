@@ -17,6 +17,15 @@ local global_pcall = GLOBAL.pcall
 local global_table = GLOBAL.table
 local unpack = GLOBAL.unpack or (global_table ~= nil and global_table.unpack or nil)
 
+local function ProtectedCall(fn, ...)
+    if type(global_pcall) == "function" then
+        return global_pcall(fn, ...)
+    end
+
+    -- Fallback for restricted mod environments where pcall is not exported.
+    return true, fn(...)
+end
+
 local M = {}
 
 --------------------------------------------------------------------------
@@ -133,7 +142,7 @@ function M.GetStrings()
         return L.RESONANCE
     end
 
-    local ok, en = global_pcall(require, "stringlocalization_en")
+    local ok, en = ProtectedCall(require, "stringlocalization_en")
     if ok and type(en) == "table" and en.RESONANCE ~= nil then
         return en.RESONANCE
     end
@@ -151,7 +160,7 @@ function M.GetText(res, field)
         return res.id
     end
 
-    local ok, text = global_pcall(GLOBAL.string.format, fmt, unpack(res.values))
+    local ok, text = ProtectedCall(GLOBAL.string.format, fmt, unpack(res.values))
     return ok and text or fmt
 end
 

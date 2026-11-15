@@ -8,7 +8,7 @@ local function GetHeatModules(inst)
         return 0
     end
 
-    local count = owner:GetModuleTypeCount("heat")
+    local count = GetActiveModuleCount(inst, "heat")
 
     if count <= 0
         or not HasActiveModule(inst, "heat")

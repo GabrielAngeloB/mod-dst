@@ -1,39 +1,57 @@
-D'WX-78 IMPROVED CIRCUITS — DST 0.1.39
+D'WX-78 IMPROVED CIRCUITS — DST 0.1.40
 ======================================
 
-CORREÇÃO DESTA VERSÃO
-- Corrigido o crash de inicialização em resonance_circuit.lua:
-  pcall e tostring eram chamados como globais do ambiente do mod, mas
-  pcall não é exposto nesse ambiente do DST. Agora as chamadas protegidas
-  usam GLOBAL.pcall e GLOBAL.tostring.
-- O mesmo acesso explícito a GLOBAL foi aplicado às rotinas compartilhadas
-  de definições e ao painel HUD da Ressonância.
-- Mantido o conjunto de bônus de ressonância e os valores de balanceamento
-  da versão anterior.
-- Fuel Oil continua desativado/removido: os arquivos desse recurso não
-  estavam presentes no pacote original completo.
+REVISÃO DE COMPATIBILIDADE E CORREÇÕES
+- O helper compartilhado diferencia módulos instalados de módulos realmente
+  ativados, respeitando a carga/slots atualmente disponíveis.
+- Beanbooster usa o tuning atual do DST:
+  TUNING.SKILLS.WX78.BEE_SHIELD_REGEN_PER_SECOND.
+  A regeneração foi ajustada para 0,5 por segundo e continua podendo ocorrer
+  durante combate, mas não enquanto WX-78 estiver ferido.
+- Redigestion usa a quantidade de módulos digestion realmente ativados;
+  não depende mais de uma variável nunca preenchida.
+- Range Booster valida no servidor skill, módulo, carga, MapExplorer e
+  parâmetros do RPC; limita raio, passo e frequência das revelações.
+- Thermal usa os métodos do componente temperature para aplicar calor/frio
+  e mantém o controlador ativo quando a temperatura chega a 0 °C.
+- Refrigerant cancela a produção de gelo quando qualquer requisito deixa de
+  ser atendido e reavalia skill/módulo/carga mesmo sem evento de umidade.
+- Processing reavalia condições periodicamente e só remove fastbuilder
+  quando a tag foi adicionada por este próprio sistema.
+- Hardy e Spatializer contam módulos ativos, não apenas módulos instalados.
+- Blocking e Screech aplicam suas constantes globais no carregamento do
+  respectivo sistema, não durante eventos de jogadores.
+- Blocking e Chorusbox preservam tags que já existiam antes dos seus efeitos.
+- Illumination captura os valores reais da luz antes de aplicar o efeito e
+  restaura cor, raio, intensidade, falloff e estado anteriores.
+- A extração de Bio Data valida receita, jogador e itens gerados; não remove
+  o módulo quando nenhuma Bio Data pode ser recuperada.
+- As chamadas protegidas da Ressonância evitam tentar chamar pcall/tostring
+  diretamente como globais ausentes do sandbox.
+- O manifesto binário antigo foi removido do pacote-fonte.
+- Incluído GitHub Actions para verificar sintaxe Lua 5.1 em todos os
+  arquivos .lua do repositório.
+
+RESSONÂNCIAS E BALANCEAMENTO
+- Os seis pares e seus valores de balanceamento foram preservados.
+- Nenhuma ressonância foi adicionada ou removida.
+- Fuel Oil permanece desativado porque seus três arquivos de implementação
+  não existem no pacote-fonte.
 
 INSTALAÇÃO LOCAL
-1. Feche o DST.
-2. Desative o mod da Workshop "D'WX-78 Improved Circuits" (ID 3722018231)
-   nos Server Mods do mundo/cluster.
-3. Extraia a pasta dwx78_improved_circuits para:
+1. Desative a versão antiga da Workshop (ID 3722018231).
+2. Extraia a pasta dwx78_improved_circuits para:
    Documents/Klei/DoNotStarveTogether/mods/
    (ou a pasta Klei equivalente que seu jogo usa).
-4. Ative "D'WX-78 Improved Circuits" na lista de Server Mods.
-5. Como o mod exige os arquivos também nos clientes, todos os jogadores
-   devem instalar a mesma versão local 0.1.39.
-6. Faça a ativação no Master e confirme que também está ativa nas Caves.
+3. Ative o mod em Server Mods no Master e também nas Caves.
+4. Como all_clients_require_mod = true, todos os jogadores precisam ter
+   exatamente a mesma versão local instalada.
+5. Teste primeiro em uma cópia do cluster, não no mundo principal.
 
-COMO CONFIRMAR QUE A CÓPIA NOVA ESTÁ EM USO
-No master_server_log.txt, a linha de ativação/carregamento deve identificar
-o mod local como "dwx78_improved_circuits" e mostrar Version:0.1.39.
-Se continuar aparecendo "workshop-3722018231" ou Version:0.1.38,
-a cópia antiga da Workshop ainda está habilitada.
-
-TESTES / LIMITAÇÕES
-- Integridade do ZIP e referências a arquivos verificadas.
-- As chamadas pcall/tostring da Ressonância foram verificadas para usar
-  GLOBAL explicitamente.
-- Não foi possível iniciar um servidor DST real neste ambiente; valide
-  primeiro em um mundo de teste/cópia do cluster.
+VALIDAÇÃO
+- Revisão estática dos sistemas, módulos, definições de ressonância,
+  painel HUD, helpers e arquivos de localização.
+- O workflow do GitHub Actions valida sintaxe Lua 5.1 em todos os arquivos.
+- Validação estática não substitui um teste em sessão real do DST. Ainda é
+  necessário testar Master + Caves, HUD, cada circuito e multiplayer antes
+  de considerar esta versão totalmente aprovada.

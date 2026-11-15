@@ -1,114 +1,141 @@
 local GLOBAL = GLOBAL
 
-----------------RANGEBOOSTER CIRCUIT CHANGES: START-------------
 local MIN_CAM_DIST = 50
+local MAX_REVEAL_RADIUS = 120
+local MIN_REVEAL_STEP = 0.10
+local MAX_REVEAL_STEP = 0.50
+local SERVER_RPC_COOLDOWN = 1.5
+local CLIENT_SEND_INTERVAL = 2.0
 
---detectar caves
 local function IsCaveWorld()
     return GLOBAL.TheWorld ~= nil and GLOBAL.TheWorld:HasTag("cave")
 end
 
------------------------------------------------------------------
--- CHECK: radar module + skill active
------------------------------------------------------------------
-local function RangeboosterCircuitSkill(inst)
-    if inst == nil then
-        return false
-    end
-
-    local module = HasActiveModule(inst, "radar")
-    local skill = HasSkill(inst, "wx78_circuitry_betabuffs_1")
-    local charge = HasCharge(inst)
-
-    return module and skill and charge
+local function IsFiniteNumber(value)
+    return type(value) == "number"
+        and value == value
+        and value ~= math.huge
+        and value ~= -math.huge
 end
 
-----------------------------------------------------------------------
--- CAMERA DISTANCE
-----------------------------------------------------------------------
-local function GetEffectiveCameraDistance(inst)
-    local base = 0
-
-    if GLOBAL.TheCamera ~= nil then
-        base = GLOBAL.TheCamera.GetRawMaxDistance
-            and GLOBAL.TheCamera:GetRawMaxDistance()
-            or GLOBAL.TheCamera.distance
-            or 0
-    end
-
-    local extra = 0
-
-    if inst.player_classified ~= nil
-        and inst.player_classified.cameraextramaxdist ~= nil then
-        extra = inst.player_classified.cameraextramaxdist:value() or 0
-    end
-
-    local result = math.max(MIN_CAM_DIST, base + extra)
-
-    -- FIX CAVES: ya que la cámara esta fija en caves, forzar comportamiento consistente con la superficie
-    if IsCaveWorld() then
-        result = result + 10
-    end
-
-    return result
+local function CanUseRangebooster(player)
+    return player ~= nil
+        and player:IsValid()
+        and player.prefab == "wx78"
+        and HasActiveModule(player, "radar")
+        and HasSkill(player, "wx78_circuitry_betabuffs_1")
+        and HasCharge(player)
 end
 
-----------------------------------------------------------------------
--- REVEAL
-----------------------------------------------------------------------
-local function RevealArea(inst, radius, step)
-    local pos = inst:GetPosition()
+-- Server-authoritative map reveal. Client parameters are validated/clamped.
+local function RevealArea(player, radius, step)
+    if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim
+        or not CanUseRangebooster(player)
+        or not IsFiniteNumber(radius)
+        or not IsFiniteNumber(step) then
+        return
+    end
 
-    local RING_COUNT = 1
-    local ring_step = radius / RING_COUNT
+    local now = GLOBAL.GetTime()
+    if player._wx78_rangebooster_last_reveal ~= nil
+        and now - player._wx78_rangebooster_last_reveal < SERVER_RPC_COOLDOWN then
+        return
+    end
 
-    for i = 1, RING_COUNT do
-        local r = ring_step * i
+    local classified = player.player_classified
+    local explorer = classified ~= nil and classified.MapExplorer or nil
+    if explorer == nil then
+        return
+    end
 
-        for theta = 0, GLOBAL.PI2, step do
-            local x = pos.x + r * math.cos(theta)
-            local z = pos.z + r * math.sin(theta)
+    radius = math.clamp(radius, 0, MAX_REVEAL_RADIUS)
+    step = math.clamp(step, MIN_REVEAL_STEP, MAX_REVEAL_STEP)
+    if radius <= 0 then
+        return
+    end
 
-            inst.player_classified.MapExplorer:RevealArea(x, 0, z)
-        end
+    player._wx78_rangebooster_last_reveal = now
+
+    local x, _, z = player.Transform:GetWorldPosition()
+    for theta = 0, GLOBAL.PI2, step do
+        explorer:RevealArea(
+            x + radius * math.cos(theta),
+            0,
+            z + radius * math.sin(theta)
+        )
     end
 end
 
 AddModRPCHandler(modname, "RevealArea", RevealArea)
 
-----------------------------------------------------------------------
--- MAIN LOOP
-----------------------------------------------------------------------
+local function GetEffectiveCameraDistance(inst)
+    local camera = GLOBAL.TheCamera
+    if camera == nil then
+        return 0
+    end
+
+    local base = 0
+    if camera.GetRawMaxDistance ~= nil then
+        base = camera:GetRawMaxDistance() or 0
+    else
+        base = camera.distance or 0
+    end
+
+    local extra = 0
+    local classified = inst.player_classified
+    if classified ~= nil and classified.cameraextramaxdist ~= nil then
+        extra = classified.cameraextramaxdist:value() or 0
+    end
+
+    local result = math.max(MIN_CAM_DIST, base + extra)
+    if IsCaveWorld() then
+        result = result + 10
+    end
+    return result
+end
+
 local function TryReveal(inst)
-    if not RangeboosterCircuitSkill(inst) then
+    if inst == nil or not inst:IsValid() then
         return
     end
 
     local camera_distance = GetEffectiveCameraDistance(inst)
-
-    -- en caves el mínimo no puede bloquear todo
-    if camera_distance <= MIN_CAM_DIST then
-        if not IsCaveWorld() then
-            return
-        end
-        -- en caves seguimos, aunque esté en el límite
+    if camera_distance <= 0 then
+        return
     end
 
-    local radius = (camera_distance - MIN_CAM_DIST) * 0.7
-    local num_steps = math.max(24, camera_distance * 0.45)
+    local radius = math.clamp(
+        (camera_distance - MIN_CAM_DIST) * 0.7,
+        0,
+        MAX_REVEAL_RADIUS
+    )
+    if radius <= 0 then
+        return
+    end
+
+    local now = GLOBAL.GetTime()
+    if inst._wx78_rangebooster_last_send ~= nil
+        and now - inst._wx78_rangebooster_last_send < CLIENT_SEND_INTERVAL then
+        return
+    end
+
+    local num_steps = math.max(24, math.min(64, math.floor(camera_distance * 0.45)))
     local step = GLOBAL.PI2 / num_steps
+    inst._wx78_rangebooster_last_send = now
 
-    SendModRPCToServer(GetModRPC(modname, "RevealArea"), radius, step)
-
-    last_camera_distance = camera_distance
-end
-----------------RANGEBOOSTER CIRCUIT CHANGES: END-------------
-
-----------------------------------------------------------------------
--- ATTACH
-----------------------------------------------------------------------
-local function ModifyMapExplorer(inst)
-    inst:DoPeriodicTask(0.12, TryReveal)
+    -- Listen-server host reveals locally; remote clients use the RPC.
+    if GLOBAL.TheWorld ~= nil and GLOBAL.TheWorld.ismastersim then
+        RevealArea(inst, radius, step)
+    else
+        SendModRPCToServer(GetModRPC(modname, "RevealArea"), radius, step)
+    end
 end
 
-AddPlayerPostInit(ModifyMapExplorer)
+AddPlayerPostInit(function(inst)
+    if inst.prefab ~= "wx78" then
+        return
+    end
+
+    -- Dedicated servers have no camera, so TryReveal exits without work.
+    inst:DoPeriodicTask(CLIENT_SEND_INTERVAL, TryReveal)
+end)

@@ -25,8 +25,8 @@ AddComponentPostInit("armor", function(self)
                         -- Puxa os circuitos instalados
                         local circuits = owner.components.upgrademoduleowner
                         if circuits ~= nil then
-                            local small_modules = circuits:GetModuleTypeCount("maxhealth") or 0
-                            local big_modules = circuits:GetModuleTypeCount("maxhealth2") or 0
+                            local small_modules = GetActiveModuleCount(owner, "maxhealth")
+                            local big_modules = GetActiveModuleCount(owner, "maxhealth2")
 
                             -- Calcula a redução de durabilidade
                             local reduction = 0
