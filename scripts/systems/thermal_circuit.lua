@@ -12,7 +12,9 @@ local HEAT_CONTROLLER_INTERVAL = 0.1
 local DAMAGE_MODIFIER_KEY = "dwx78_thermal_overheat"
 
 local function GetHeatModules(inst)
-    return GetActiveModuleCount(inst, "heat")
+    local count = GetActiveModuleCount(inst, "heat")
+    -- Preserve the original Thermal circuit gate: its effects require charge.
+    return count > 0 and HasCharge(inst) and count or 0
 end
 
 local function HasHeatSkill(inst)
@@ -78,8 +80,7 @@ local function UpdateOverheat(inst)
     end
 
     local heatmods = GetHeatModules(inst)
-    -- Preserve the original circuit behavior: module count affects the
-    -- overheat hurt rate even before the Beta skill unlocks attack overclock.
+    -- Original behavior changes the overheat rate with active, charged modules.
     if heatmods > 0 then
         local rate = heatmods >= 2
             and TUNING.WILSON_HEALTH / 60

@@ -3,6 +3,7 @@ D'WX-78 IMPROVED CIRCUITS — DST 0.1.40
 
 REVISÃO DE COMPATIBILIDADE
 - Corrigida a chave do TUNING usada pela regeneração de escudo do Beanbooster.
+- Preservados os nutrientes do Moistened Nutribrick definidos pelo mod original.
 - Redigestion agora calcula módulos de digestão realmente ativados, em vez de
   depender de uma variável nunca preenchida.
 - Range Booster valida no servidor o WX-78, o circuito, a habilidade, a carga,
@@ -10,8 +11,8 @@ REVISÃO DE COMPATIBILIDADE
   original de alcance nas Cavernas foi preservada.
 - As chamadas frágeis a GLOBAL.pcall/GLOBAL.tostring foram removidas da
   implementação da Ressonância.
-- O controlador Thermal não encerra mais definitivamente quando a temperatura
-  chega a zero; as alterações de temperatura usam a API do componente.
+- O controlador Thermal mantém a tarefa ativa quando a temperatura chega a
+  zero e utiliza a API do componente; os efeitos continuam exigindo carga.
 - Refrigerant revalida habilidade, módulos, carga e umidade enquanto produz gelo.
 - Processing reavalia periodicamente as condições para não deixar a tag
   fastbuilder presa quando a carga ou os circuitos mudam.
