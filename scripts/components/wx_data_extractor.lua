@@ -5,7 +5,8 @@ local WX_Data_Extractor = Class(function(self, inst)
 end)
 
 local function SafeGetRecipe(prefab)
-    return GLOBAL.AllRecipes ~= nil and GLOBAL.AllRecipes[prefab] or nil
+    local recipes = GLOBAL.AllRecipes or AllRecipes
+    return recipes ~= nil and recipes[prefab] or nil
 end
 
 local function GetScandataYield(recipe)
@@ -52,19 +53,29 @@ function WX_Data_Extractor:BreakDown(target, doer)
         return false
     end
 
-    for _ = 1, yield do
+    -- Create all refund items before delivering any of them. If the prefab is
+    -- unavailable, leave the module intact and clean up the partial batch.
+    local items = {}
+    for i = 1, yield do
         local item = GLOBAL.SpawnPrefab("scandata")
         if item == nil then
+            for _, spawned in ipairs(items) do
+                if spawned:IsValid() then
+                    spawned:Remove()
+                end
+            end
             return false
         end
+        items[i] = item
+    end
 
-        if receiver ~= nil and receiver.GiveItem ~= nil then
+    for _, item in ipairs(items) do
+        if receiver ~= nil and type(receiver.GiveItem) == "function" then
             receiver:GiveItem(item, nil, position)
         elseif item.Transform ~= nil then
             item.Transform:SetPosition(position:Get())
         else
             item:Remove()
-            return false
         end
     end
 

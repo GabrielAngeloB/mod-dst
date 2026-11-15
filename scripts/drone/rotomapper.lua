@@ -58,8 +58,11 @@ AddPrefabPostInit("wx78_drone_scout", function(inst)
         end
 
         local comp = inst.components.mapdeliverable
-        local oldfn = comp.onstopdeliveryfn
+        if type(comp.SetOnStopDeliveryFn) ~= "function" then
+            return
+        end
 
+        local oldfn = comp.onstopdeliveryfn
         comp:SetOnStopDeliveryFn(function(drone)
             if oldfn ~= nil then
                 oldfn(drone)

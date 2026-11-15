@@ -19,9 +19,14 @@ REVISÃO DE COMPATIBILIDADE
 - Chorusbox remove apenas as tags que ele próprio adicionou.
 - Illumination tenta preservar os parâmetros de luz originais antes de aplicar
   o visual do circuito.
-- Blocking remove heavybody apenas quando foi o próprio mod que adicionou a tag.
-- O bônus de recarga do escudo de Blocking é aplicado individualmente ao WX-78,
-  sem alterar o cooldown global de outros jogadores.
+- Blocking e Screech reduzem seus cooldowns por jogador, sem alterar os valores
+  globais de TUNING e afetar outros WX-78.
+- Quickplugging restaura a velocidade de animação mesmo que a habilidade mude
+  durante a animação e preserva callbacks de reparo existentes.
+- O extrator não consome um módulo quando a receita não rende Scandata; também
+  valida os itens gerados antes de remover o módulo.
+- Hooks do mapa e do drone passam a verificar métodos antes de substituí-los.
+- Os overrides do Scrapbook e da árvore de habilidades toleram entradas ausentes.
 
 INSTALAÇÃO LOCAL
 1. Feche o DST.
@@ -44,7 +49,7 @@ CONFIGURAÇÃO
 
 VALIDAÇÃO
 - Os quatro arquivos de localização contêm as seis entradas de ressonância.
-- Os imports Lua presentes no modmain correspondem a arquivos do pacote.
+- Os imports locais do modmain apontam para arquivos existentes no pacote.
 - As chamadas pcall/tostring da Ressonância não são mais usadas.
 - A validação estática não substitui um teste em servidor DST real. Antes de
   usar no mundo principal, teste uma cópia do cluster com Master e Caves.
