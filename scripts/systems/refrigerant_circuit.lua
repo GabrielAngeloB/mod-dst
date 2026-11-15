@@ -1,29 +1,14 @@
 local GLOBAL = GLOBAL
 
-----------------REFRIGERANT CIRCUIT CHANGES: START------------
--- Refrigerant circuit freezes attackers + applies slow scaling
----------------------------------------------------------------
-
 local COLD_SKILL = "wx78_circuitry_betabuffs_1"
 local FREEZE_PER_MODULE = 1.25
-
--------------------------------------------------------
---                   SLOW CONFIG
--------------------------------------------------------
 
 local SLOW_TAG = "wx78_refrigerant_slow"
 local SLOW_DURATION = 5
 local SLOW_MULT = 49 / 90
 
--------------------------------------------------------
---                   ICE MAKER CONFIG
--------------------------------------------------------
-
 local ICE_TIMER = 25
-
--------------------------------------------------------
---                   FREEZE COLOR fx
--------------------------------------------------------
+local ICE_CHECK_PERIOD = 0.5
 
 local FREEZE_COLOUR = { 82 / 255, 115 / 255, 124 / 255, 0 }
 
@@ -43,154 +28,143 @@ local function PopColour(inst)
     end
 end
 
--------------------------------------------------------
---                   MODULE COUNT
--------------------------------------------------------
-
 local function GetColdModules(inst)
-    local owner = inst.components.upgrademoduleowner
-    if owner == nil then
-        return 0
-    end
-    return owner:GetModuleTypeCount("cold") or 0
+    return GetActiveModuleCount(inst, "cold")
 end
 
--------------------------------------------------------
---                   ICE MAKER
--------------------------------------------------------
-
 local function CanMakeIce(inst)
-    return HasSkill(inst, COLD_SKILL) and GetColdModules(inst) > 0 and HasCharge(inst)
+    local moisture = inst.components ~= nil and inst.components.moisture or nil
+    return HasSkill(inst, COLD_SKILL)
+        and GetColdModules(inst) > 0
+        and HasCharge(inst)
+        and moisture ~= nil
+        and moisture:GetMoisture() > 0
+end
+
+local function StopIceMaker(inst)
+    if inst._wx78_icemaker_task ~= nil then
+        inst._wx78_icemaker_task:Cancel()
+        inst._wx78_icemaker_task = nil
+    end
+end
+
+local function SpawnIce(wx)
+    if not CanMakeIce(wx) then
+        StopIceMaker(wx)
+        return
+    end
+
+    local modules = GetColdModules(wx)
+    local x, y, z = wx.Transform:GetWorldPosition()
+
+    for i = 1, modules do
+        local ice = GLOBAL.SpawnPrefab("ice")
+        if ice ~= nil and ice.Transform ~= nil then
+            ice.Transform:SetPosition(x, y, z)
+            if wx.SoundEmitter ~= nil then
+                wx.SoundEmitter:PlaySound("dontstarve_DLC001/common/iceboulder_smash")
+            end
+            GLOBAL.Launch(ice, wx, 1.3)
+        end
+    end
 end
 
 local function UpdateIceMaker(inst)
     if not CanMakeIce(inst) then
-        if inst.icemakertask ~= nil then
-            inst.icemakertask:Cancel()
-            inst.icemakertask = nil
-        end
+        StopIceMaker(inst)
         return
     end
 
-    if inst.components.moisture ~= nil and inst.components.moisture:GetMoisture() > 0 then
-        if inst.icemakertask == nil then
-            inst.icemakertask = inst:DoPeriodicTask(ICE_TIMER, function (wx)
-                local modules = GetColdModules(wx)
-                if modules <= 0 then return end
-                local x, y, z = wx.Transform:GetWorldPosition()
-
-                for i = 1, modules do
-                    local ice = SpawnPrefab("ice")
-                    ice.Transform:SetPosition(x, y, z)
-                    inst.SoundEmitter:PlaySound("dontstarve_DLC001/common/iceboulder_smash")
-                    Launch(ice, wx, 1.3)
-                end
-            end)
-        end
-    elseif inst.icemakertask ~= nil then
-        inst.icemakertask:Cancel()
-        inst.icemakertask = nil
+    if inst._wx78_icemaker_task == nil then
+        inst._wx78_icemaker_task = inst:DoPeriodicTask(ICE_TIMER, SpawnIce)
     end
 end
--------------------------------------------------------
---                   FREEZE EFFECT
--------------------------------------------------------
 
 local function FreezeAttacker(inst, attacker)
-    if attacker == nil then return end
-    if attacker.components == nil or attacker.components.freezable == nil then return end
+    if attacker == nil or attacker.components == nil
+        or attacker.components.freezable == nil then
+        return
+    end
 
     local modules = GetColdModules(inst)
-    if modules <= 0 then return end
+    if modules <= 0 then
+        return
+    end
 
     attacker.components.freezable:AddColdness(FREEZE_PER_MODULE * modules)
     attacker.components.freezable:SpawnShatterFX()
 end
 
--------------------------------------------------------
---                   SLOW EFFECT
--------------------------------------------------------
-
 local function ApplySlow(inst, attacker)
-    if attacker == nil then return end
-    if attacker.components == nil or attacker.components.locomotor == nil then return end
+    if attacker == nil or not attacker:IsValid()
+        or attacker.components == nil
+        or attacker.components.locomotor == nil then
+        return
+    end
 
     local data = attacker._wx78_slow_data
-
     if data == nil then
         data = { task = nil, endtime = nil }
-
         attacker._wx78_slow_data = data
     end
 
-    data.endtime = GetTime() + SLOW_DURATION
-
     local modules = GetColdModules(inst)
-    if modules <= 0 then return end
+    if modules <= 0 then
+        return
+    end
 
-    local mult = SLOW_MULT ^ modules
-
-    attacker.components.locomotor:SetExternalSpeedMultiplier(attacker, SLOW_TAG, mult)
+    data.endtime = GLOBAL.GetTime() + SLOW_DURATION
+    attacker.components.locomotor:SetExternalSpeedMultiplier(
+        attacker, SLOW_TAG, SLOW_MULT ^ modules
+    )
 
     local function UpdateColour()
         local d = attacker._wx78_slow_data
-        if d == nil then return end
+        if d == nil or not attacker:IsValid() then
+            return
+        end
 
-        local t = d.endtime - GetTime()
-
-        if t <= 0 then
+        local remaining = d.endtime - GLOBAL.GetTime()
+        if remaining <= 0 then
             PopColour(attacker)
-
-            attacker.components.locomotor:RemoveExternalSpeedMultiplier(attacker, SLOW_TAG)
+            if attacker.components ~= nil and attacker.components.locomotor ~= nil then
+                attacker.components.locomotor:RemoveExternalSpeedMultiplier(attacker, SLOW_TAG)
+            end
             attacker._wx78_slow_data = nil
             return
         end
 
-        local percent = math.clamp(t / SLOW_DURATION, 0, 1)
-
+        local percent = math.max(0, math.min(1, remaining / SLOW_DURATION))
         PushColour(
-            attacker, FREEZE_COLOUR[1] * percent, FREEZE_COLOUR[2] * percent, FREEZE_COLOUR[3] * percent,
+            attacker,
+            FREEZE_COLOUR[1] * percent,
+            FREEZE_COLOUR[2] * percent,
+            FREEZE_COLOUR[3] * percent,
             FREEZE_COLOUR[4] * percent
         )
-
         d.task = attacker:DoTaskInTime(0.2, UpdateColour)
     end
 
     if data.task ~= nil then
         data.task:Cancel()
     end
-
     UpdateColour()
 end
 
--------------------------------------------------------
---                   CONDITIONS
--------------------------------------------------------
-
 local function ShouldFreeze(inst)
-    return HasSkill(inst, COLD_SKILL) and GetColdModules(inst) > 0 and HasCharge(inst)
+    return HasSkill(inst, COLD_SKILL)
+        and GetColdModules(inst) > 0
+        and HasCharge(inst)
 end
 
--------------------------------------------------------
---                   ATTACK EVENT
--------------------------------------------------------
-
 local function OnColdAttacked(inst, data)
-    if data == nil or data.attacker == nil then
-        return
-    end
-
-    if not ShouldFreeze(inst) then
+    if data == nil or data.attacker == nil or not ShouldFreeze(inst) then
         return
     end
 
     FreezeAttacker(inst, data.attacker)
     ApplySlow(inst, data.attacker)
 end
-
--------------------------------------------------------
---                   HOOK
--------------------------------------------------------
 
 local function HookCold(inst)
     if inst._cold_hooked then
@@ -199,27 +173,24 @@ local function HookCold(inst)
 
     inst._cold_hooked = true
 
-    inst:ListenForEvent("attacked", function (_, data)
+    inst:ListenForEvent("attacked", function(_, data)
         OnColdAttacked(inst, data)
     end)
 
-    inst:ListenForEvent("moisturedelta", function ()
+    inst:ListenForEvent("moisturedelta", function()
         UpdateIceMaker(inst)
     end)
 
     UpdateIceMaker(inst)
+    inst:DoPeriodicTask(ICE_CHECK_PERIOD, UpdateIceMaker)
 end
 
--------------------------------------------------------
---                   INIT
--------------------------------------------------------
-
-AddPrefabPostInit("wx78", function (inst)
-    if not GLOBAL.TheNet:GetIsServer() then
+AddPrefabPostInit("wx78", function(inst)
+    if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim then
         return
     end
 
-    inst:DoTaskInTime(0, function ()
+    inst:DoTaskInTime(0, function()
         HookCold(inst)
     end)
 end)

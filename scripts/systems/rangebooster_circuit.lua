@@ -1,51 +1,100 @@
 local GLOBAL = GLOBAL
-
-----------------RANGEBOOSTER CIRCUIT CHANGES: START-------------
 local MIN_CAM_DIST = 50
+local MAX_REVEAL_RADIUS = 80
+local MIN_REVEAL_POINTS = 24
+local MAX_REVEAL_POINTS = 72
+local SERVER_REQUEST_INTERVAL = 0.5
+local TWO_PI = GLOBAL.PI2 or (2 * math.pi)
 
---detectar caves
 local function IsCaveWorld()
     return GLOBAL.TheWorld ~= nil and GLOBAL.TheWorld:HasTag("cave")
 end
 
------------------------------------------------------------------
--- CHECK: radar module + skill active
------------------------------------------------------------------
-local function RangeboosterCircuitSkill(inst)
-    if inst == nil then
-        return false
-    end
-
-    local module = HasActiveModule(inst, "radar")
-    local skill = HasSkill(inst, "wx78_circuitry_betabuffs_1")
-    local charge = HasCharge(inst)
-
-    return module and skill and charge
+local function CanRevealForPlayer(player)
+    return player ~= nil
+        and player:IsValid()
+        and player.prefab == "wx78"
+        and HasActiveModule(player, "radar")
+        and HasSkill(player, "wx78_circuitry_betabuffs_1")
+        and HasCharge(player)
 end
 
-----------------------------------------------------------------------
--- CAMERA DISTANCE
-----------------------------------------------------------------------
+-- RPC arguments are untrusted. All gameplay requirements are checked again
+-- against the authoritative server-side player before the map is revealed.
+local function RevealArea(player, requested_radius, requested_step)
+    if not CanRevealForPlayer(player) then
+        return
+    end
+
+    if type(requested_radius) ~= "number"
+        or requested_radius ~= requested_radius
+        or requested_radius == math.huge
+        or requested_radius == -math.huge then
+        return
+    end
+
+    local now = GLOBAL.GetTime()
+    if player._dwx78_range_last_request ~= nil
+        and now - player._dwx78_range_last_request < SERVER_REQUEST_INTERVAL then
+        return
+    end
+    player._dwx78_range_last_request = now
+
+    local classified = player.player_classified
+    local explorer = classified ~= nil and classified.MapExplorer or nil
+    if explorer == nil or explorer.RevealArea == nil then
+        return
+    end
+
+    local radius = math.max(0, math.min(MAX_REVEAL_RADIUS, requested_radius))
+    if radius <= 0 then
+        return
+    end
+
+    local points = MIN_REVEAL_POINTS
+    if type(requested_step) == "number"
+        and requested_step > 0
+        and requested_step < math.huge then
+        points = math.floor(TWO_PI / requested_step + 0.5)
+    end
+    points = math.max(MIN_REVEAL_POINTS, math.min(MAX_REVEAL_POINTS, points))
+    local step = TWO_PI / points
+
+    local x, _, z = player.Transform:GetWorldPosition()
+    explorer:RevealArea(x, 0, z)
+
+    for i = 0, points - 1 do
+        local angle = i * step
+        explorer:RevealArea(
+            x + radius * math.cos(angle),
+            0,
+            z + radius * math.sin(angle)
+        )
+    end
+end
+
+AddModRPCHandler(modname, "RevealArea", RevealArea)
+
 local function GetEffectiveCameraDistance(inst)
     local base = 0
 
     if GLOBAL.TheCamera ~= nil then
-        base = GLOBAL.TheCamera.GetRawMaxDistance
-            and GLOBAL.TheCamera:GetRawMaxDistance()
-            or GLOBAL.TheCamera.distance
-            or 0
+        if GLOBAL.TheCamera.GetRawMaxDistance ~= nil then
+            base = GLOBAL.TheCamera:GetRawMaxDistance() or 0
+        else
+            base = GLOBAL.TheCamera.distance or 0
+        end
     end
 
     local extra = 0
-
-    if inst.player_classified ~= nil
-        and inst.player_classified.cameraextramaxdist ~= nil then
-        extra = inst.player_classified.cameraextramaxdist:value() or 0
+    local classified = inst ~= nil and inst.player_classified or nil
+    if classified ~= nil and classified.cameraextramaxdist ~= nil then
+        extra = classified.cameraextramaxdist:value() or 0
     end
 
+    -- Match the original cave behavior: clamp the camera to the surface
+    -- minimum first, then add the cave compensation.
     local result = math.max(MIN_CAM_DIST, base + extra)
-
-    -- FIX CAVES: ya que la cámara esta fija en caves, forzar comportamiento consistente con la superficie
     if IsCaveWorld() then
         result = result + 10
     end
@@ -53,62 +102,43 @@ local function GetEffectiveCameraDistance(inst)
     return result
 end
 
-----------------------------------------------------------------------
--- REVEAL
-----------------------------------------------------------------------
-local function RevealArea(inst, radius, step)
-    local pos = inst:GetPosition()
-
-    local RING_COUNT = 1
-    local ring_step = radius / RING_COUNT
-
-    for i = 1, RING_COUNT do
-        local r = ring_step * i
-
-        for theta = 0, GLOBAL.PI2, step do
-            local x = pos.x + r * math.cos(theta)
-            local z = pos.z + r * math.sin(theta)
-
-            inst.player_classified.MapExplorer:RevealArea(x, 0, z)
-        end
-    end
-end
-
-AddModRPCHandler(modname, "RevealArea", RevealArea)
-
-----------------------------------------------------------------------
--- MAIN LOOP
-----------------------------------------------------------------------
 local function TryReveal(inst)
-    if not RangeboosterCircuitSkill(inst) then
+    if inst == nil or not inst:IsValid() or inst.prefab ~= "wx78" then
         return
     end
 
+    -- The server performs authoritative circuit/skill/charge validation.
+    -- The client only supplies its current camera-derived reveal radius.
     local camera_distance = GetEffectiveCameraDistance(inst)
+    local radius = math.min(
+        MAX_REVEAL_RADIUS,
+        math.max(0, (camera_distance - MIN_CAM_DIST) * 0.7)
+    )
 
-    -- en caves el mínimo no puede bloquear todo
-    if camera_distance <= MIN_CAM_DIST then
-        if not IsCaveWorld() then
-            return
-        end
-        -- en caves seguimos, aunque esté en el límite
+    if radius <= 0 then
+        return
     end
 
-    local radius = (camera_distance - MIN_CAM_DIST) * 0.7
-    local num_steps = math.max(24, camera_distance * 0.45)
-    local step = GLOBAL.PI2 / num_steps
-
+    local num_points = math.max(
+        MIN_REVEAL_POINTS,
+        math.min(MAX_REVEAL_POINTS, math.floor(camera_distance * 0.45))
+    )
+    local step = TWO_PI / num_points
     SendModRPCToServer(GetModRPC(modname, "RevealArea"), radius, step)
-
-    last_camera_distance = camera_distance
-end
-----------------RANGEBOOSTER CIRCUIT CHANGES: END-------------
-
-----------------------------------------------------------------------
--- ATTACH
-----------------------------------------------------------------------
-local function ModifyMapExplorer(inst)
-    inst:DoPeriodicTask(0.12, TryReveal)
 end
 
-AddPlayerPostInit(ModifyMapExplorer)
+local function AttachClientReveal(inst)
+    if inst.prefab ~= "wx78" then
+        return
+    end
+
+    -- AddPlayerPostInit runs in both simulations. Do not schedule client RPCs
+    -- from the authoritative server simulation.
+    if GLOBAL.TheWorld == nil or GLOBAL.TheWorld.ismastersim then
+        return
+    end
+
+    inst:DoPeriodicTask(0.5, TryReveal)
+end
+
+AddPlayerPostInit(AttachClientReveal)

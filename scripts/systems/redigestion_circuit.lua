@@ -1,87 +1,68 @@
 local GLOBAL = GLOBAL
 
------------------REDIGESTION CIRCUIT CHANGES: START-------------
--------------------------------------------------------
--- REDIGESTION CIRCUIT Skill:
--------------------------------------------------------
-
 local HUNGER_TABLES = {
-    0.5,  -- 1 module = 50% negative effects
-    0.25, -- 2 modules = 75%
-    0.00  -- 3 modules = immunity
+    0.5,  -- 1 active module = 50% of negative effects remain
+    0.25, -- 2 active modules = 25% remain
+    0.00  -- 3 active modules = immunity
 }
 
--------------------------------------------------------
--- MODULE COUNT
--------------------------------------------------------
 local function GetDigestionModules(inst)
-    return inst._digestion_modules or 0
+    return math.min(GetActiveModuleCount(inst, "digestion"), #HUNGER_TABLES)
 end
 
--------------------------------------------------------
--- CONDITIONS
--------------------------------------------------------
 local function ShouldNegateFoodPenalty(inst)
     return HasSkill(inst, "wx78_circuitry_gammabuffs_1")
-        and HasActiveModule(inst, "digestion")
+        and GetDigestionModules(inst) > 0
         and HasCharge(inst)
 end
 
--------------------------------------------------------
--- FOOD NEGATION FUNCTION
--------------------------------------------------------
 local function DigestionStatsNegate(inst, health_delta, hunger_delta, sanity_delta, food, feeder)
-
-    ---------------------------------------------------
-    -- CONDITIONS
-    ---------------------------------------------------
     if not ShouldNegateFoodPenalty(inst) then
         return health_delta, hunger_delta, sanity_delta
     end
 
-    local modules = GetDigestionModules(inst)
-    local modifier = HUNGER_TABLES[modules]
-
+    local modifier = HUNGER_TABLES[GetDigestionModules(inst)]
     if modifier == nil then
         return health_delta, hunger_delta, sanity_delta
     end
 
-    ---------------------------------------------------
-    -- NEGATIVE HEALTH
-    ---------------------------------------------------
     if health_delta < 0 then
         health_delta = health_delta * modifier
     end
 
-    ---------------------------------------------------
-    -- NEGATIVE HUNGER
-    ---------------------------------------------------
     if hunger_delta < 0 then
         hunger_delta = hunger_delta * modifier
     end
 
-    ---------------------------------------------------
-    -- NEGATIVE SANITY
-    ---------------------------------------------------
     if sanity_delta < 0 then
         sanity_delta = sanity_delta * modifier
     end
 
     return health_delta, hunger_delta, sanity_delta
 end
------------------REDIGESTION CIRCUIT CHANGES: END-------------
 
--------------------------------------------------------
--- HOOK
--------------------------------------------------------
 AddPrefabPostInit("wx78", function(inst)
-    if not GLOBAL.TheWorld.ismastersim then
+    if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim then
         return
     end
 
     inst:DoTaskInTime(0, function()
-        if inst.components.eater ~= nil then
-            inst.components.eater.custom_stats_mod_fn = DigestionStatsNegate
+        local eater = inst.components ~= nil and inst.components.eater or nil
+        if eater == nil then
+            return
+        end
+
+        -- Preserve a custom modifier installed by another mod.
+        local old_fn = eater.custom_stats_mod_fn
+        eater.custom_stats_mod_fn = function(eater_inst, health_delta, hunger_delta, sanity_delta, food, feeder)
+            if old_fn ~= nil then
+                health_delta, hunger_delta, sanity_delta =
+                    old_fn(eater_inst, health_delta, hunger_delta, sanity_delta, food, feeder)
+            end
+
+            return DigestionStatsNegate(
+                eater_inst, health_delta, hunger_delta, sanity_delta, food, feeder
+            )
         end
     end)
 end)

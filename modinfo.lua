@@ -6,7 +6,7 @@ description = "DST rework and quality-of-life changes for WX-78 circuits.\n" ..
 "• Drone, scanning, recipes and world-system improvements."
 
 author = "Deurus"
-version = "0.1.39"
+version = "0.1.40"
 forumthread = ""
 
 api_version = 10
@@ -18,7 +18,7 @@ reign_of_giants_compatible = false
 all_clients_require_mod = true
 client_only_mod = false
 -- This package includes shared simulation logic and client-side HUD code.
--- Disable the stale Workshop manifest so newly added Lua files can be required.
+-- Local copies load Lua files directly instead of requiring the Workshop manifest.
 forcemanifest = false
 server_filter_tags = {"wx78", "circuit", "improvement"}
 
@@ -102,7 +102,7 @@ configuration_options =
 
     BinaryConfig("screech", "Sonic-Invoker Circuit", "Enables/Disables Extra skill effect for Sonic Invoker Circuit", true),
     BinaryConfig("redigestion", "Redigestion Circuit", "Enables/Disables Extra skill effect for Redigestion Circuit", true),
-    BinaryConfig("blocking", "Blocking Circuit", "Enables/Disables Extra skill effect + Rework for Blocking  Circuit", true),
+    BinaryConfig("blocking", "Blocking Circuit", "Enables/Disables Extra skill effect + Rework for Blocking Circuit", true),
     BinaryConfig("hardy", "Hardy Circuit", "Enables/Disables Skill effect Rework for all Hardy Circuits", true),
     BinaryConfig("processing", "Processing Circuit", "Enables/Disables Extra skill effect for all Processing Circuits", true),
     BinaryConfig("beanbooster", "Beanbooster Circuit", "Enables/Disables Shield regeneration Buff for Beanbooster Circuit", true),
@@ -113,7 +113,7 @@ configuration_options =
     BinaryConfig("refrigerant", "Refrigerant Circuit", "Enables/Disables Extra skill effect for Refrigerant Circuits", true),
     BinaryConfig("spatializer", "Spatializer Circuit", "Enables/Disables Skill effect for Spatializer Circuit", true),
     BinaryConfig("illumination", "Illumination Circuit", "Enables/Disables Skill effect Rework for all Illumination Circuits", true),
-     BinaryConfig("quickplugging", "Right to Modify Skill", "Enables/Disables Recycle+Repair circuits and Plug+Unplug circuits 50% faster.", true),
+    BinaryConfig("quickplugging", "Right to Modify Skill", "Enables/Disables Recycle+Repair circuits and Plug+Unplug circuits 50% faster.", true),
 
     SkipSpace(),
 
