@@ -46,8 +46,24 @@ AddPrefabPostInit("wx78", function(inst)
     end
 
     inst:DoTaskInTime(0, function()
-        if inst:IsValid() and inst.components.eater ~= nil then
-            inst.components.eater.custom_stats_mod_fn = DigestionStatsNegate
+        local eater = inst:IsValid() and inst.components.eater or nil
+        if eater == nil or inst._dwx78_redigestion_wrapped then
+            return
         end
+
+        -- Preserve another mod's custom food-stat callback instead of
+        -- replacing it. Redigestion applies after the previously registered
+        -- callback has adjusted the incoming deltas.
+        local previous_custom_stats_mod_fn = eater.custom_stats_mod_fn
+        eater.custom_stats_mod_fn = function(wx, health_delta, hunger_delta, sanity_delta, food, feeder)
+            if previous_custom_stats_mod_fn ~= nil then
+                health_delta, hunger_delta, sanity_delta =
+                    previous_custom_stats_mod_fn(wx, health_delta, hunger_delta, sanity_delta, food, feeder)
+            end
+
+            return DigestionStatsNegate(wx, health_delta, hunger_delta, sanity_delta, food, feeder)
+        end
+
+        inst._dwx78_redigestion_wrapped = true
     end)
 end)

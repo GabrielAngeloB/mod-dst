@@ -44,7 +44,7 @@ local function RevealArea(player, radius, step)
 
     local classified = player.player_classified
     local explorer = classified ~= nil and classified.MapExplorer or nil
-    if explorer == nil then
+    if explorer == nil or explorer.RevealArea == nil then
         return
     end
 
@@ -95,7 +95,8 @@ local function GetEffectiveCameraDistance(inst)
 end
 
 local function TryReveal(inst)
-    if inst == nil or not inst:IsValid() then
+    if inst == nil or not inst:IsValid()
+        or not CanUseRangebooster(inst) then
         return
     end
 
