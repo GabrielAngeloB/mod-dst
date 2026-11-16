@@ -1,7 +1,7 @@
 name = "Take Your Time"
 description = "Configure the length of the day and the pace of hunger, fire, growth, insulation, spoilage, equipment decay, monster timers and sanity."
 author = "wlayton27/Sirus — DST compatibility update"
-version = "2.0.3"
+version = "2.0.4"
 api_version = 10
 
 dst_compatible = true

@@ -2,6 +2,15 @@
 -- TUNING values are adjusted before the world and its components are created.
 -- A full in-game restart is required after changing these options.
 
+-- DST runs modmain.lua in a restricted environment. Standard Lua functions
+-- must be obtained through GLOBAL instead of assumed to exist as bare globals.
+local GLOBAL = GLOBAL
+local tonumber = GLOBAL.tonumber
+local type = GLOBAL.type
+local ipairs = GLOBAL.ipairs
+local pairs = GLOBAL.pairs
+local string = GLOBAL.string
+local print = GLOBAL.print
 local TUNING = GLOBAL.TUNING
 
 local DEFAULT_DAY_MINUTES = 8
@@ -365,7 +374,7 @@ ScaleRates({
 }, Ratio("sanity"))
 
 print(string.format(
-    "[Take Your Time 2.0.1] Loaded. Day: %d min; hunger: %d; fire: %d; growth: %d; insulation: %d; spoilage: %d; equipment: %d; creatures: %d; sanity: %d.",
+    "[Take Your Time 2.0.4] Loaded. Day: %d min; hunger: %d; fire: %d; growth: %d; insulation: %d; spoilage: %d; equipment: %d; creatures: %d; sanity: %d.",
     minutes.day, minutes.hunger, minutes.fire, minutes.growth,
     minutes.insulation, minutes.spoilage, minutes.equipment, minutes.creatures, minutes.sanity
 ))
