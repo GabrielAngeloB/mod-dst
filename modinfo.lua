@@ -6,7 +6,7 @@ description = "DST rework and quality-of-life changes for WX-78 circuits.\n" ..
 "• Drone, scanning, recipes and world-system improvements."
 
 author = "Deurus"
-version = "0.1.40"
+version = "0.1.41"
 forumthread = ""
 
 api_version = 10
