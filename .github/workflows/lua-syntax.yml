@@ -28,3 +28,6 @@ jobs:
             echo "Checking $file"
             luac5.1 -p "$file"
           done < <(find . -type f -name '*.lua' -not -path './.git/*' -print0)
+
+      - name: Test Take Your Time in the restricted DST mod environment
+        run: lua5.1 tests/take_your_time_sandbox.lua

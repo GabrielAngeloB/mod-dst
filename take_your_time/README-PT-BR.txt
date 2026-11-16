@@ -1,4 +1,4 @@
-TAKE YOUR TIME — atualização de compatibilidade DST 2.0.2
+TAKE YOUR TIME — atualização de compatibilidade DST 2.0.4
 
 INSTALAÇÃO
 1. Feche o Don't Starve Together.
@@ -39,3 +39,8 @@ OBSERVAÇÕES TÉCNICAS
 CORREÇÃO 2.0.2
 - Removidas todas as chamadas a tostring/table do modinfo.lua.
 - Os rótulos numéricos das opções usam uma tabela local literal, compatível com o ambiente restrito de carregamento de metadados do DST.
+
+
+CORREÇÃO 2.0.4
+- Corrigido o carregamento no ambiente restrito do DST: as funções Lua padrão usadas pelo modmain.lua agora são obtidas através de GLOBAL.
+- Adicionado teste de regressão que executa o modmain.lua em um sandbox sem acesso direto às funções globais padrão.
