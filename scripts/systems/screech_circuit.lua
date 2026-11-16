@@ -1,6 +1,9 @@
 local GLOBAL = GLOBAL
 local TUNING = GLOBAL.TUNING
 
+-- Global cooldown tuning is configured once when this option is loaded.
+TUNING.WX78_SCREECH_COOLDOWN = 10
+
 --------------------------------------------------------------------------
 -- WX78 Screech Aggro Fix (GATED BY CIRCUIT CONDITIONS)
 -- Only runs if module + skill + charge are active
@@ -21,13 +24,6 @@ local function CanUseScreechCircuit(wx)
     return HasActiveModule(wx, "screech")
         and HasSkill(wx, "wx78_circuitry_gammabuffs_1")
         and HasCharge(wx)
-end
-
--------------------------------------------------------
--- COOLDOWN (ONLY WHEN ACTIVE)
--------------------------------------------------------
-local function ApplyCooldownReduction(wx)
-    TUNING.WX78_SCREECH_COOLDOWN = 10
 end
 
 -------------------------------------------------------
@@ -97,9 +93,7 @@ AddPlayerPostInit(function(inst)
         if not CanUseScreechCircuit(inst) then
             return
         end
-
-        -- only now we apply effects
-        ApplyCooldownReduction(inst)
+        -- The cooldown tuning is configured once at mod load.
 
         if data ~= nil and data.statename == "wx_screech_pre" then
             StartScreechAggroProtection(inst)

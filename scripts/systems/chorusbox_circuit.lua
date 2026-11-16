@@ -18,19 +18,24 @@ local EXTRA_TAGS = { "monkey", "tallbird", "guard", "frog", "wx_disguised" }
 local function ChorusboxCircuitSkill(wx)
     if wx == nil or not wx:IsValid() then return end
 
-    local module = HasSkill(wx, "wx78_circuitry_betabuffs_1") 
-    local skill = HasActiveModule(wx, "music")
+    local skill = HasSkill(wx, "wx78_circuitry_betabuffs_1")
+    local module = HasActiveModule(wx, "music")
     local charge = HasCharge(wx)
-    
+    local enabled = skill and module and charge
+
+    wx._dwx78_chorusbox_added_tags = wx._dwx78_chorusbox_added_tags or {}
+
     for _, tag in ipairs(EXTRA_TAGS) do
-        if module and skill and charge then
+        if enabled then
             if not wx:HasTag(tag) then
                 wx:AddTag(tag)
+                wx._dwx78_chorusbox_added_tags[tag] = true
             end
-        else
+        elseif wx._dwx78_chorusbox_added_tags[tag] then
             if wx:HasTag(tag) then
                 wx:RemoveTag(tag)
             end
+            wx._dwx78_chorusbox_added_tags[tag] = nil
         end
     end
 end

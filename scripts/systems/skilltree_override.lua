@@ -1,62 +1,24 @@
+local GLOBAL = GLOBAL
 local SKILLTREE_DEFS = require("prefabs/skilltree_defs").SKILLTREE_DEFS
 local L = GLOBAL.L
 
-local wx = SKILLTREE_DEFS.wx78
+local wx = SKILLTREE_DEFS ~= nil and SKILLTREE_DEFS.wx78 or nil
+local skill_strings = L ~= nil and L.SKILLTREE ~= nil and L.SKILLTREE.WX78 or nil
 
+if wx ~= nil and skill_strings ~= nil then
+    if GetModConfigData("quickplugging") ~= false then
+        local skill = wx.wx78_circuitry_betterunplug
+        if skill ~= nil then
+            skill.title = skill_strings.WX78_BETTER_UNPLUG_TITLE or skill.title
+            skill.desc = skill_strings.WX78_BETTER_UNPLUG_DESC or skill.desc
+        end
+    end
 
-if wx then
-
-    -- wx.wx78_circuitry_slot_1.title =
-    --     L.SKILLTREE.WX78.WX78_CIRCUITRY_SLOT_1_TITLE
-    -- wx.wx78_circuitry_slot_1.desc =
-    --     L.SKILLTREE.WX78.WX78_CIRCUITRY_SLOT_1_DESC
-
-
-    -- wx.wx78_circuitry_bettercharge.title =
-    --     L.SKILLTREE.WX78.WX78_BETTER_CHARGE_TITLE
-    -- wx.wx78_circuitry_bettercharge.desc =
-    --     L.SKILLTREE.WX78.WX78_BETTER_CHARGE_DESC
-
-
-    wx.wx78_circuitry_betterunplug.title =
-        L.SKILLTREE.WX78.WX78_BETTER_UNPLUG_TITLE
-    wx.wx78_circuitry_betterunplug.desc =
-        L.SKILLTREE.WX78.WX78_BETTER_UNPLUG_DESC
-
-
-    -- wx.wx78_circuitry_alphabuffs_1.title =
-    --     L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_1_TITLE
-    -- wx.wx78_circuitry_alphabuffs_1.desc =
-    --     L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_1_DESC
-
-
-    -- wx.wx78_circuitry_alphabuffs_2.title =
-    --     L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_2_TITLE
-    -- wx.wx78_circuitry_alphabuffs_2.desc =
-    --     L.SKILLTREE.WX78.WX78_ALPHA_CIRCUIT_BUFFS_2_DESC
-
-
-    -- wx.wx78_circuitry_betabuffs_1.title =
-    --     L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_1_TITLE
-    -- wx.wx78_circuitry_betabuffs_1.desc =
-    --     L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_1_DESC
-
-
-    -- wx.wx78_circuitry_betabuffs_2.title =
-    --     L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_2_TITLE
-    -- wx.wx78_circuitry_betabuffs_2.desc =
-    --     L.SKILLTREE.WX78.WX78_BETA_CIRCUIT_BUFFS_2_DESC
-
-
-    -- wx.wx78_circuitry_gammabuffs_1.title =
-    --     L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_1_TITLE
-    -- wx.wx78_circuitry_gammabuffs_1.desc =
-    --     L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_1_DESC
-
-
-    wx.wx78_circuitry_gammabuffs_2.title =
-        L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_2_TITLE
-    wx.wx78_circuitry_gammabuffs_2.desc =
-        L.SKILLTREE.WX78.WX78_GAMMA_CIRCUIT_BUFFS_2_DESC
-
+    if GetModConfigData("spatializer") ~= false then
+        local skill = wx.wx78_circuitry_gammabuffs_2
+        if skill ~= nil then
+            skill.title = skill_strings.WX78_GAMMA_CIRCUIT_BUFFS_2_TITLE or skill.title
+            skill.desc = skill_strings.WX78_GAMMA_CIRCUIT_BUFFS_2_DESC or skill.desc
+        end
+    end
 end

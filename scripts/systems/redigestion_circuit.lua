@@ -1,87 +1,69 @@
 local GLOBAL = GLOBAL
 
------------------REDIGESTION CIRCUIT CHANGES: START-------------
--------------------------------------------------------
--- REDIGESTION CIRCUIT Skill:
--------------------------------------------------------
-
-local HUNGER_TABLES = {
-    0.5,  -- 1 module = 50% negative effects
-    0.25, -- 2 modules = 75%
-    0.00  -- 3 modules = immunity
+local NEGATIVE_DELTA_MULTIPLIERS = {
+    0.50, -- 1 active module: 50% of the penalty remains.
+    0.25, -- 2 active modules: 25% remains.
+    0.00, -- 3 active modules: immunity to negative stat deltas.
 }
 
--------------------------------------------------------
--- MODULE COUNT
--------------------------------------------------------
-local function GetDigestionModules(inst)
-    return inst._digestion_modules or 0
-end
-
--------------------------------------------------------
--- CONDITIONS
--------------------------------------------------------
 local function ShouldNegateFoodPenalty(inst)
     return HasSkill(inst, "wx78_circuitry_gammabuffs_1")
         and HasActiveModule(inst, "digestion")
         and HasCharge(inst)
 end
 
--------------------------------------------------------
--- FOOD NEGATION FUNCTION
--------------------------------------------------------
 local function DigestionStatsNegate(inst, health_delta, hunger_delta, sanity_delta, food, feeder)
-
-    ---------------------------------------------------
-    -- CONDITIONS
-    ---------------------------------------------------
     if not ShouldNegateFoodPenalty(inst) then
         return health_delta, hunger_delta, sanity_delta
     end
 
-    local modules = GetDigestionModules(inst)
-    local modifier = HUNGER_TABLES[modules]
+    local modules = math.min(
+        GetActiveModuleCount(inst, "digestion"),
+        #NEGATIVE_DELTA_MULTIPLIERS
+    )
+    local multiplier = NEGATIVE_DELTA_MULTIPLIERS[modules]
 
-    if modifier == nil then
+    if multiplier == nil then
         return health_delta, hunger_delta, sanity_delta
     end
 
-    ---------------------------------------------------
-    -- NEGATIVE HEALTH
-    ---------------------------------------------------
     if health_delta < 0 then
-        health_delta = health_delta * modifier
+        health_delta = health_delta * multiplier
     end
-
-    ---------------------------------------------------
-    -- NEGATIVE HUNGER
-    ---------------------------------------------------
     if hunger_delta < 0 then
-        hunger_delta = hunger_delta * modifier
+        hunger_delta = hunger_delta * multiplier
     end
-
-    ---------------------------------------------------
-    -- NEGATIVE SANITY
-    ---------------------------------------------------
     if sanity_delta < 0 then
-        sanity_delta = sanity_delta * modifier
+        sanity_delta = sanity_delta * multiplier
     end
 
     return health_delta, hunger_delta, sanity_delta
 end
------------------REDIGESTION CIRCUIT CHANGES: END-------------
 
--------------------------------------------------------
--- HOOK
--------------------------------------------------------
 AddPrefabPostInit("wx78", function(inst)
-    if not GLOBAL.TheWorld.ismastersim then
+    if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim then
         return
     end
 
     inst:DoTaskInTime(0, function()
-        if inst.components.eater ~= nil then
-            inst.components.eater.custom_stats_mod_fn = DigestionStatsNegate
+        local eater = inst:IsValid() and inst.components.eater or nil
+        if eater == nil or inst._dwx78_redigestion_wrapped then
+            return
         end
+
+        -- Preserve another mod's custom food-stat callback instead of
+        -- replacing it. Redigestion applies after the previously registered
+        -- callback has adjusted the incoming deltas.
+        local previous_custom_stats_mod_fn = eater.custom_stats_mod_fn
+        eater.custom_stats_mod_fn = function(wx, health_delta, hunger_delta, sanity_delta, food, feeder)
+            if previous_custom_stats_mod_fn ~= nil then
+                health_delta, hunger_delta, sanity_delta =
+                    previous_custom_stats_mod_fn(wx, health_delta, hunger_delta, sanity_delta, food, feeder)
+            end
+
+            return DigestionStatsNegate(wx, health_delta, hunger_delta, sanity_delta, food, feeder)
+        end
+
+        inst._dwx78_redigestion_wrapped = true
     end)
 end)

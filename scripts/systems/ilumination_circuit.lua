@@ -1,53 +1,41 @@
 local GLOBAL = GLOBAL
-----------------------------------------------------------------
--- LIGHTMODULE CHANGES
-----------------------------------------------------------------
-----------------------------------------------------------------
--- LIGHTMODULE_BEAM block
-----------------------------------------------------------------
+
 AddComponentPostInit("upgrademoduleowner", function(self)
-    local _CanUseModule = self.CanUseModule
-    if _CanUseModule then
-        self.CanUseModule = function(self, module, ...)
+    local old_can_use = self.CanUseModule
+    if old_can_use ~= nil then
+        function self:CanUseModule(module, ...)
             if module == "lightmodule_beam" then
                 return false
             end
-
-            return _CanUseModule(self, module, ...)
+            return old_can_use(self, module, ...)
         end
     end
 
-    local _ActivateModule = self.ActivateModule
-    if _ActivateModule then
-        self.ActivateModule = function(self, module, ...)
+    local old_activate = self.ActivateModule
+    if old_activate ~= nil then
+        function self:ActivateModule(module, ...)
             if module == "lightmodule_beam" then
                 return false
             end
-
-            return _ActivateModule(self, module, ...)
+            return old_activate(self, module, ...)
         end
     end
 end)
 
-----------------------------------------------------------------
--- REMOVE LIGHTBEAM
-----------------------------------------------------------------
 AddPrefabPostInit("wx78_lightbeam", function(inst)
     inst:DoTaskInTime(0, function()
-        inst:Remove()
+        if inst:IsValid() then
+            inst:Remove()
+        end
     end)
 end)
 
-----------------------------------------------------------------
--- WX78 LIGHT OVERRIDE
-----------------------------------------------------------------
 AddPrefabPostInit("wx78", function(inst)
-    if not GLOBAL.TheWorld.ismastersim then
+    if GLOBAL.TheWorld == nil or not GLOBAL.TheWorld.ismastersim then
         return
     end
 
     local SKILL = "wx78_circuitry_betabuffs_2"
-
     local COLOR = { 180 / 255, 195 / 255, 150 / 255 }
 
     local BASE_RADIUS = 2
@@ -56,88 +44,73 @@ AddPrefabPostInit("wx78", function(inst)
     local RADIUS_PER_MODULE = 1
 
     local applied = false
+    local original_light = nil
 
-    --------------------------------------------------------
-    -- MODULE COUNT
-    --------------------------------------------------------
-    local function GetActiveLightModules(inst)
-        local owner = inst.components.upgrademoduleowner
-
-        if owner == nil then
-            return 0
+    local function CaptureOriginalLight(light)
+        if light == nil or light.GetColour == nil
+            or light.GetIntensity == nil or light.GetRadius == nil
+            or light.GetFalloff == nil then
+            return nil
         end
 
-        local count = 0
-
-        for _, module in ipairs(owner:GetAllModules()) do
-            if (module.prefab == "wx78module_light"
-                or module.prefab == "wx78module_light2")
-                and module.components ~= nil
-                and module.components.upgrademodule ~= nil
-                and module.components.upgrademodule.activated then
-
-                count = count + 1
-            end
-        end
-
-        return count
+        local r, g, b = light:GetColour()
+        return {
+            r = r,
+            g = g,
+            b = b,
+            intensity = light:GetIntensity(),
+            radius = light:GetRadius(),
+            falloff = light:GetFalloff(),
+            enabled = light.IsEnabled ~= nil and light:IsEnabled() or false,
+        }
     end
 
-    --------------------------------------------------------
-    -- LIGHT UPDATE
-    --------------------------------------------------------
-    inst:DoPeriodicTask(0.1, function()
-        if inst.Light == nil then
+    local function RestoreOriginalLight(light)
+        if light == nil or original_light == nil then
             return
         end
 
-        ----------------------------------------------------
-        -- CONDITIONS
-        ----------------------------------------------------
-        if not HasSkill(inst, SKILL) or not HasCharge(inst) then
-            if applied then
-                inst.Light:SetColour(1, 1, 1)
-                inst.Light:SetIntensity(0.9)
-                inst.Light:SetRadius(0.5)
-                inst.Light:SetFalloff(0.5)
+        light:SetColour(original_light.r, original_light.g, original_light.b)
+        light:SetIntensity(original_light.intensity)
+        light:SetRadius(original_light.radius)
+        light:SetFalloff(original_light.falloff)
+        light:Enable(original_light.enabled)
+    end
 
-                applied = false
-            end
+    local function GetActiveLightModules(wx)
+        return GetActiveModuleCount(wx, "light")
+            + GetActiveModuleCount(wx, "light2")
+    end
 
+    local function ApplyLight()
+        if not inst:IsValid() or inst.Light == nil then
             return
         end
 
-        ----------------------------------------------------
-        -- ACTIVE MODULES
-        ----------------------------------------------------
         local active_modules = GetActiveLightModules(inst)
+        local should_apply = HasSkill(inst, SKILL)
+            and HasCharge(inst)
+            and active_modules > 0
 
-        if active_modules <= 0 then
-            if applied then
-                inst.Light:SetColour(1, 1, 1)
-                inst.Light:SetIntensity(0.9)
-                inst.Light:SetRadius(0.5)
-                inst.Light:SetFalloff(0.5)
-
-                applied = false
+        if should_apply then
+            if not applied then
+                original_light = CaptureOriginalLight(inst.Light)
             end
 
-            return
+            inst.Light:SetColour(COLOR[1], COLOR[2], COLOR[3])
+            inst.Light:SetIntensity(BASE_INTENSITY)
+            inst.Light:SetRadius(BASE_RADIUS + active_modules * RADIUS_PER_MODULE)
+            inst.Light:SetFalloff(FALLOFF)
+            inst.Light:Enable(true)
+
+            applied = true
+        elseif applied then
+            RestoreOriginalLight(inst.Light)
+            applied = false
+            original_light = nil
         end
+    end
 
-        ----------------------------------------------------
-        -- STACK
-        ----------------------------------------------------
-        local radius = BASE_RADIUS + (active_modules * RADIUS_PER_MODULE)
-
-        ----------------------------------------------------
-        -- APPLY
-        ----------------------------------------------------
-        inst.Light:SetColour(COLOR[1], COLOR[2], COLOR[3])
-        inst.Light:SetIntensity(BASE_INTENSITY)
-        inst.Light:SetRadius(radius)
-        inst.Light:SetFalloff(FALLOFF)
-
-        applied = true
-    end)
+    inst:DoTaskInTime(0, ApplyLight)
+    inst:DoPeriodicTask(0.25, ApplyLight)
 end)

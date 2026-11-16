@@ -16,6 +16,21 @@ local global_pcall = GLOBAL.pcall
 local global_tostring = GLOBAL.tostring
 local Defs = require("resonance/wx_resonance_defs")
 
+local function ProtectedCall(fn, ...)
+    if type(global_pcall) == "function" then
+        return global_pcall(fn, ...)
+    end
+    return true, fn(...)
+end
+
+local function ErrorString(err)
+    if type(err) == "string" then
+        return err
+    end
+    return type(global_tostring) == "function"
+        and global_tostring(err) or "<unavailable error details>"
+end
+
 -- Layout (screen units, anchored to the top-left corner of the screen)
 local OFFSET_X = 110
 local OFFSET_Y = -40
@@ -139,10 +154,10 @@ function WXResonancePanel:OnUpdate(dt)
     if mask ~= self.shown_mask then
         self.shown_mask = mask
 
-        local ok, err = global_pcall(self.Refresh, self, mask)
+        local ok, err = ProtectedCall(self.Refresh, self, mask)
         if not ok then
             -- Stop updating instead of erroring every frame.
-            print("[WX-78 Resonance] HUD panel stopped: " .. global_tostring(err))
+            print("[WX-78 Resonance] HUD panel stopped: " .. ErrorString(err))
             self:Hide()
             self:StopUpdating()
         end

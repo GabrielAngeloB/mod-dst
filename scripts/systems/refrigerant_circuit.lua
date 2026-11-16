@@ -52,7 +52,7 @@ local function GetColdModules(inst)
     if owner == nil then
         return 0
     end
-    return owner:GetModuleTypeCount("cold") or 0
+    return GetActiveModuleCount(inst, "cold")
 end
 
 -------------------------------------------------------
@@ -63,33 +63,47 @@ local function CanMakeIce(inst)
     return HasSkill(inst, COLD_SKILL) and GetColdModules(inst) > 0 and HasCharge(inst)
 end
 
+local function StopIceMaker(inst)
+    if inst.icemakertask ~= nil then
+        inst.icemakertask:Cancel()
+        inst.icemakertask = nil
+    end
+end
+
 local function UpdateIceMaker(inst)
-    if not CanMakeIce(inst) then
-        if inst.icemakertask ~= nil then
-            inst.icemakertask:Cancel()
-            inst.icemakertask = nil
-        end
+    local moisture = inst.components.moisture
+    local can_run = CanMakeIce(inst)
+        and moisture ~= nil
+        and moisture:GetMoisture() > 0
+
+    if not can_run then
+        StopIceMaker(inst)
         return
     end
 
-    if inst.components.moisture ~= nil and inst.components.moisture:GetMoisture() > 0 then
-        if inst.icemakertask == nil then
-            inst.icemakertask = inst:DoPeriodicTask(ICE_TIMER, function (wx)
-                local modules = GetColdModules(wx)
-                if modules <= 0 then return end
-                local x, y, z = wx.Transform:GetWorldPosition()
+    if inst.icemakertask == nil then
+        inst.icemakertask = inst:DoPeriodicTask(ICE_TIMER, function(wx)
+            local wx_moisture = wx.components.moisture
+            if not CanMakeIce(wx) or wx_moisture == nil
+                or wx_moisture:GetMoisture() <= 0 then
+                StopIceMaker(wx)
+                return
+            end
 
-                for i = 1, modules do
-                    local ice = SpawnPrefab("ice")
+            local modules = GetColdModules(wx)
+            local x, y, z = wx.Transform:GetWorldPosition()
+
+            for _ = 1, modules do
+                local ice = SpawnPrefab("ice")
+                if ice ~= nil then
                     ice.Transform:SetPosition(x, y, z)
-                    inst.SoundEmitter:PlaySound("dontstarve_DLC001/common/iceboulder_smash")
+                    if wx.SoundEmitter ~= nil then
+                        wx.SoundEmitter:PlaySound("dontstarve_DLC001/common/iceboulder_smash")
+                    end
                     Launch(ice, wx, 1.3)
                 end
-            end)
-        end
-    elseif inst.icemakertask ~= nil then
-        inst.icemakertask:Cancel()
-        inst.icemakertask = nil
+            end
+        end)
     end
 end
 -------------------------------------------------------
@@ -203,10 +217,12 @@ local function HookCold(inst)
         OnColdAttacked(inst, data)
     end)
 
-    inst:ListenForEvent("moisturedelta", function ()
+    inst:ListenForEvent("moisturedelta", function()
         UpdateIceMaker(inst)
     end)
 
+    -- Skill, charge and module activation can change without moisture events.
+    inst._wx_ice_maker_watch = inst:DoPeriodicTask(1, UpdateIceMaker)
     UpdateIceMaker(inst)
 end
 
