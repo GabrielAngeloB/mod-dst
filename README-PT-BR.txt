@@ -1,5 +1,10 @@
-D'WX-78 IMPROVED CIRCUITS — DST 0.1.40
+D'WX-78 IMPROVED CIRCUITS — DST 0.1.41
 ======================================
+
+CORREÇÃO DE HOTFIX 0.1.41
+- Corrigido o carregamento das definições de Ressonância em ambientes
+  com verificação estrita: o arquivo agora obtém o ambiente global por _G,
+  sem tentar ler GLOBAL antes de ele estar declarado.
 
 REVISÃO DE COMPATIBILIDADE E CORREÇÕES
 - O helper compartilhado diferencia módulos instalados de módulos realmente
