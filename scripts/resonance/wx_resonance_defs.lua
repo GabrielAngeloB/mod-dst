@@ -12,7 +12,7 @@
 --   4. add its texts to RESONANCE.ENTRIES in all stringlocalization_*.lua
 --------------------------------------------------------------------------
 
-local GLOBAL = GLOBAL or _G
+local GLOBAL = _G
 local global_pcall = GLOBAL.pcall
 local global_table = GLOBAL.table
 local unpack = GLOBAL.unpack or (global_table ~= nil and global_table.unpack or nil)
