@@ -52,8 +52,8 @@ assert(effects_source:find('storage.prefab == "wx78_inventorycontainer"', 1, tru
     "Tractor Beam must locate WX-78's special Spatializer storage")
 assert(effects_source:find('container:GiveItem(item, nil, source_position, false)', 1, true),
     "Tractor Beam must explicitly fall back to the powered Spatializer storage")
-assert(effects_source:find('inventory:GiveItem(item, nil, source_position, false)', 1, true),
-    "Tractor Beam must try regular inventory slots without dropping on failure")
+assert(effects_source:find('inventory:GiveItem(item, nil, source_position)', 1, true),
+    "Tractor Beam must try the normal inventory transfer path")
 assert(not effects_source:find("inventory:IsFull()", 1, true),
     "Tractor Beam must not skip specialized/overflow storage when regular slots are full")
 

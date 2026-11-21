@@ -946,10 +946,10 @@ local function TryGiveTractorLoot(inst, item)
 
     local source_position = item:GetPosition()
 
-    -- First use ordinary inventory slots. The fourth argument prevents a
-    -- failed transfer from dropping the item again before the Spatializer
-    -- fallback gets a chance to store it.
-    if inventory:GiveItem(item, nil, source_position, false) then
+    -- First use the normal inventory path, including its regular stacking and
+    -- specialized-container handling. If it cannot take the item, the explicit
+    -- powered-Spatializer fallback below gets another chance.
+    if inventory:GiveItem(item, nil, source_position) then
         return true
     end
 
