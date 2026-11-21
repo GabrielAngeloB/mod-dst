@@ -141,7 +141,7 @@ M.RESONANCES = {
 
 function M.IsElite(res)
     return res.tier == "elite"
-}
+end
 
 --------------------------------------------------------------------------
 -- AVAILABILITY (respects the per-circuit config toggles of the mod)
