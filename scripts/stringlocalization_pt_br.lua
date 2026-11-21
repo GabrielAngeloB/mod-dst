@@ -120,6 +120,9 @@ return {
         TITLE = "RESSONÂNCIA DE CIRCUITOS",
         SPEECH_ON = "RESSONÂNCIA ATIVA: %s",
         SPEECH_OFF = "RESSONÂNCIA PERDIDA: %s",
+        SPEECH_TRIGGER = "%s!",
+        STATE_RECHARGING = "RECARREGANDO",
+        STATE_STANDBY = "EM ESPERA",
         SCRAPBOOK_HEADER = "Ressonância de Circuitos: com os dois circuitos de um par instalados, alimentados e desbloqueados por suas habilidades, um pequeno bônus extra é obtido.",
         SCRAPBOOK_LINE = "- %s (com %s): %s",
 
@@ -133,6 +136,7 @@ return {
             blocking = "Circuito de Bloqueio",
             hardy = "Circuito Robusto",
             illumination = "Circuito de Iluminação",
+            spatializer = "Circuito Espacializador",
         },
 
         ENTRIES = {
@@ -165,6 +169,36 @@ return {
                 NAME = "BRILHO DO LAR",
                 SHORT = "-%s%% de consumo de Fome à noite e nas cavernas.",
                 DESC = "A luz aconchegante mantém o chassi eficiente: a Fome diminui %s%% mais devagar à noite e nas cavernas.",
+            },
+            absolute_zero = {
+                NAME = "ZERO ABSOLUTO",
+                SHORT = "Quando um bloqueio que absorveu golpes termina, uma onda de gelo congela os inimigos ao redor.",
+                DESC = "Bloqueie ao menos um golpe: quando o escudo cai, uma onda de zero absoluto congela todos os inimigos em um raio de %s. Quanto mais dano o escudo absorveu, mais forte o congelamento (chefes só são resfriados). No máximo uma vez a cada %s segundos.",
+            },
+            supernova = {
+                NAME = "SUPERNOVA",
+                SHORT = "Em overclock, a onda sônica detona o calor acumulado, ferindo e empurrando inimigos próximos.",
+                DESC = "Usar a onda sônica em overclock (%s graus ou mais) detona o calor acumulado: inimigos em um raio de %s sofrem %s de dano (+%s com dois ou mais módulos de calor) e são empurrados, e sua temperatura corporal cai. No máximo uma vez a cada %s segundos.",
+            },
+            fury_hymn = {
+                NAME = "HINO DE FÚRIA",
+                SHORT = "Em overclock: aliados próximos ganham +%s%% de dano e +%s%% de velocidade.",
+                DESC = "Enquanto você está em overclock, o coro anima todos ao redor: aliados ganham +%s%% de dano e +%s%% de velocidade de movimento (você recebe o bônus de velocidade também), em um raio de %s.",
+            },
+            ghost_protocol = {
+                NAME = "PROTOCOLO FANTASMA",
+                SHORT = "Fique parado por %s segundos: as criaturas perdem você de vista e seu primeiro ataque causa +%s%% de dano.",
+                DESC = "Depois de ficar parado por %s segundos, as criaturas próximas esquecem você e seu próximo ataque causa +%s%% de dano (à noite e nas cavernas bastam %s segundos). Se mover, atacar ou ser atingido quebra o efeito.",
+            },
+            phoenix_protocol = {
+                NAME = "PROTOCOLO FÊNIX",
+                SHORT = "Ao cair abaixo de %s%% de vida: recupera %s%% e explode os inimigos próximos (uma vez a cada %s minutos).",
+                DESC = "Quando a vida cai abaixo de %s%%, WX-78 é restaurado a %s%% de vida, no máximo uma vez a cada %s minutos. Você fica invulnerável por %s segundos e uma explosão de calor causa %s de dano aos inimigos em um raio de %s.",
+            },
+            tractor_beam = {
+                NAME = "RAIO TRATOR",
+                SHORT = "O saque das suas vítimas voa direto para o seu inventário.",
+                DESC = "Itens derrubados por criaturas que você mata, em um raio de %s do local, são puxados para o seu inventário (para o armazenamento do Spatializer quando a mochila enche). Itens que já estavam no chão nunca são tocados.",
             },
         },
     },

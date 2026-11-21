@@ -41,6 +41,12 @@ end
 local EVAL_PERIOD = 0.5          -- seconds between requirement checks (same cadence as other circuits)
 local QUIET_AFTER_SPAWN = 5      -- no speech right after spawning/loading (modules are still powering up)
 local SPEECH_DEBOUNCE = 3        -- minimum seconds between two messages about the same resonance
+local TRIGGER_DEBOUNCE = 4       -- same, for the shout of an elite effect firing
+
+local RESONANCE_BY_ID = {}
+for _, res in ipairs(Defs.RESONANCES) do
+    RESONANCE_BY_ID[res.id] = res
+end
 
 local function IsConfigEnabled(name)
     return GetModConfigData(name) ~= false
@@ -77,7 +83,7 @@ local function AppendScrapbook()
                 S.SCRAPBOOK_LINE,
                 Defs.GetText(res, "NAME"),
                 Defs.GetCircuitName(partner),
-                Defs.GetText(res, "DESC")
+                Defs.GetText(res, "SHORT") -- keep scrapbook pages readable
             )
 
             for _, module_name in ipairs(Defs.CIRCUITS[own].modules) do
@@ -176,6 +182,40 @@ local function Announce(inst, res, active)
     end
 end
 
+
+-- Called by elite effects the moment they fire.
+local function Trigger(inst, id)
+    local res = RESONANCE_BY_ID[id]
+    local talker = inst.components.talker
+    if res == nil or talker == nil then return end
+
+    local now = GLOBAL.GetTime()
+    local last = inst._wx_resonance_triggered[id]
+    if last ~= nil and now - last < TRIGGER_DEBOUNCE then return end
+    inst._wx_resonance_triggered[id] = now
+
+    local S = Defs.GetStrings()
+    if S.SPEECH_TRIGGER ~= nil then
+        talker:Say(string.format(S.SPEECH_TRIGGER, Defs.GetText(res, "NAME")))
+    end
+end
+
+-- Bitmask of active resonances that are ready to act. Effects without a
+-- cooldown or arming state are considered ready.
+local function ComputeReadyMask(inst)
+    local ready = {}
+    for id in pairs(inst._wx_resonances) do
+        local effect = Effects[id]
+        local is_ready = true
+        if effect ~= nil and effect.ready ~= nil then
+            local ok, value = ProtectedCall(effect.ready, inst)
+            is_ready = not ok or value == true
+        end
+        if is_ready then ready[id] = true end
+    end
+    return Defs.EncodeMask(ready)
+end
+
 local function SafeCall(fn, inst, res, action)
     local ok, err = ProtectedCall(fn, inst)
     if not ok then
@@ -219,17 +259,30 @@ local function Refresh(inst)
     if changed then
         inst._wx_resonance_mask:set(Defs.EncodeMask(inst._wx_resonances))
     end
+
+    local ready_mask = ComputeReadyMask(inst)
+    if ready_mask ~= inst._wx_resonance_ready:value() then
+        inst._wx_resonance_ready:set(ready_mask)
+    end
 end
 
 local function InitServer(inst)
-    Effects = Effects or require("resonance/wx_resonance_effects")
+    if Effects == nil then
+        Effects = require("resonance/wx_resonance_effects")
+        Effects.SetServices({
+            GetActiveModuleCount = GetActiveModuleCount,
+            Trigger = Trigger,
+        })
+    end
 
-    inst._wx_resonances = {}                -- ids of the resonances currently active
-    inst._wx_resonance_spoke = {}           -- id -> last time a message was said
+    inst._wx_resonances = {}
+    inst._wx_resonance_spoke = {}
+    inst._wx_resonance_triggered = {}
     inst._wx_resonance_quiet_until = GLOBAL.GetTime() + QUIET_AFTER_SPAWN
 
     inst:DoPeriodicTask(EVAL_PERIOD, Refresh)
-    inst:ListenForEvent("death", Refresh)   -- tear everything down immediately
+    inst:ListenForEvent("death", Refresh)
+    inst:ListenForEvent("energylevelupdate", Refresh)
 end
 
 --------------------------------------------------------------------------
@@ -237,6 +290,7 @@ end
 --------------------------------------------------------------------------
 AddPrefabPostInit("wx78", function(inst)
     inst._wx_resonance_mask = GLOBAL.net_ushortint(inst.GUID, "wx78_resonance.mask", "wx78_resonance_dirty")
+    inst._wx_resonance_ready = GLOBAL.net_ushortint(inst.GUID, "wx78_resonance.ready", "wx78_resonance_ready_dirty")
 
     if not GLOBAL.TheWorld.ismastersim then
         return

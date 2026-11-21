@@ -11,7 +11,7 @@
 
 local Widget = require("widgets/widget")
 local Text = require("widgets/text")
-local GLOBAL = GLOBAL or _G
+local GLOBAL = _G
 local global_pcall = GLOBAL.pcall
 local global_tostring = GLOBAL.tostring
 local Defs = require("resonance/wx_resonance_defs")
@@ -47,6 +47,8 @@ local ENTRY_GAP = 8
 
 local COLOUR_TITLE = { 0.7, 0.7, 0.7, 0.85 }
 local COLOUR_NAME = { 0.45, 0.85, 1, 1 }
+local COLOUR_ELITE = { 1, 0.82, 0.3, 1 }
+local COLOUR_ELITE_WAIT = { 0.62, 0.62, 0.62, 0.95 }
 local COLOUR_DESC = { 0.88, 0.88, 0.88, 0.95 }
 
 -- Rough number of text lines the description will wrap into (no font metrics
@@ -70,6 +72,7 @@ local WXResonancePanel = Class(Widget, function(self, owner)
 
     self.owner = owner
     self.shown_mask = nil
+    self.shown_ready = nil
     self.entries = {}
 
     self:SetHAnchor(ANCHOR_LEFT)
@@ -106,7 +109,7 @@ local function PlaceText(text, top, height)
     text:SetPosition(WIDTH / 2, -(top + height / 2), 0)
 end
 
-function WXResonancePanel:Refresh(mask)
+function WXResonancePanel:Refresh(mask, ready_mask)
     local strings = Defs.GetStrings()
     local top = 0
     local any = false
@@ -124,7 +127,23 @@ function WXResonancePanel:Refresh(mask)
             local desc = Defs.GetText(res, "SHORT")
             local desc_h = EstimateLines(desc) * DESC_LINE_H
 
-            entry.name:SetString(Defs.GetText(res, "NAME"))
+            local name = Defs.GetText(res, "NAME")
+            local colour = COLOUR_NAME
+
+            if Defs.IsElite(res) then
+                local is_ready = ready_mask == nil or Defs.IsInMask(ready_mask, res)
+                colour = is_ready and COLOUR_ELITE or COLOUR_ELITE_WAIT
+
+                if not is_ready then
+                    local label = res.wait == "standby" and strings.STATE_STANDBY or strings.STATE_RECHARGING
+                    if label ~= nil then
+                        name = name .. "  [" .. label .. "]"
+                    end
+                end
+            end
+
+            entry.name:SetString(name)
+            entry.name:SetColour(colour[1], colour[2], colour[3], colour[4])
             PlaceText(entry.name, top, NAME_H)
             top = top + NAME_H
 
@@ -148,13 +167,16 @@ function WXResonancePanel:Refresh(mask)
 end
 
 function WXResonancePanel:OnUpdate(dt)
-    local netvar = self.owner ~= nil and self.owner._wx_resonance_mask or nil
-    local mask = netvar ~= nil and netvar:value() or 0
+    local mask_var = self.owner ~= nil and self.owner._wx_resonance_mask or nil
+    local ready_var = self.owner ~= nil and self.owner._wx_resonance_ready or nil
+    local mask = mask_var ~= nil and mask_var:value() or 0
+    local ready = ready_var ~= nil and ready_var:value() or nil
 
-    if mask ~= self.shown_mask then
+    if mask ~= self.shown_mask or ready ~= self.shown_ready then
         self.shown_mask = mask
+        self.shown_ready = ready
 
-        local ok, err = ProtectedCall(self.Refresh, self, mask)
+        local ok, err = ProtectedCall(self.Refresh, self, mask, ready)
         if not ok then
             -- Stop updating instead of erroring every frame.
             print("[WX-78 Resonance] HUD panel stopped: " .. ErrorString(err))

@@ -46,7 +46,11 @@ M.CIRCUITS = {
     blocking       = { modules = { "shielding" },              skill = "wx78_circuitry_gammabuffs_2", config = "blocking"     }, -- blocking_circuit.lua
     hardy          = { modules = { "maxhealth", "maxhealth2" }, skill = "wx78_circuitry_alphabuffs_1", config = "hardy"        }, -- hardy_circuit.lua
     illumination   = { modules = { "light", "light2" },        skill = "wx78_circuitry_betabuffs_2",  config = "illumination" }, -- ilumination_circuit.lua
+    spatializer    = { modules = { "stacksize" },              skill = "wx78_circuitry_gammabuffs_2", config = "spatializer"  }, -- spatializer_circuit.lua
 }
+
+-- Mod option that switches the whole elite tier on/off.
+M.ELITE_OPTION = "resonance_elite"
 
 --------------------------------------------------------------------------
 -- TUNING (single source of truth: effects AND displayed texts use these)
@@ -58,6 +62,14 @@ M.TUNING = {
     adaptive_plating    = { DAMAGE_TAKEN_MULT = 0.85, DURATION = 3 },
     echolocation        = { REVEAL_RADIUS = 30, RINGS = 3, POINTS_PER_RING = 8, COOLDOWN = 20 },
     hearth_glow         = { HUNGER_BURN_MULT = 0.95, TICK = 0.5 },
+
+    -- ELITE TIER
+    absolute_zero       = { RADIUS = 9, BASE_COLDNESS = 1.5, BONUS_COLDNESS = 1.0, ABSORB_CAP = 100, COOLDOWN = 30 },
+    supernova           = { RADIUS = 8, DAMAGE = 60, EXTRA_MODULE_DAMAGE = 30, MAX_TARGETS = 10, MIN_TEMP = 65, COOLED_TEMP = 50, KNOCKBACK = 1.3, COOLDOWN = 25 },
+    fury_hymn           = { RADIUS = 14, DAMAGE_BONUS = 0.12, SPEED_BONUS = 0.10, LINGER = 3, TICK = 1, MIN_TEMP = 65 },
+    ghost_protocol      = { STILL_TIME = 3, STILL_TIME_DARK = 2, MOVE_EPSILON = 0.4, CLEAR_RADIUS = 25, AMBUSH_MULT = 1.5, ALPHA = 0.45, TICK = 0.25 },
+    phoenix_protocol    = { COOLDOWN = 480, TRIGGER_PERCENT = 0.12, REVIVE_PERCENT = 0.4, INVINCIBLE = 3, RADIUS = 7, DAMAGE = 50, MIN_HEALTH = 1, MAX_TARGETS = 10, TICK = 1 },
+    tractor_beam        = { RADIUS = 9, MAX_ITEMS = 12, SNAPSHOT_TIMEOUT = 8, SWEEPS = { 0.7, 1.8 } },
 }
 
 local T = M.TUNING
@@ -99,6 +111,36 @@ M.RESONANCES = {
         id = "hearth_glow", bit = 5, circuits = { "thermal", "illumination" },
         values = { pct(1 - T.hearth_glow.HUNGER_BURN_MULT) },
     },
+
+    -- ELITE TIER (tier = "elite"). `wait` picks the HUD label shown while not ready.
+    {
+        id = "absolute_zero", bit = 6, tier = "elite", circuits = { "refrigerant", "blocking" },
+        values = { T.absolute_zero.RADIUS, T.absolute_zero.COOLDOWN },
+    },
+    {
+        id = "supernova", bit = 7, tier = "elite", wait = "standby", circuits = { "thermal", "sonic" },
+        values = { T.supernova.MIN_TEMP, T.supernova.RADIUS, T.supernova.DAMAGE, T.supernova.EXTRA_MODULE_DAMAGE, T.supernova.COOLDOWN },
+    },
+    {
+        id = "fury_hymn", bit = 8, tier = "elite", wait = "standby", circuits = { "thermal", "chorusbox" },
+        values = { pct(T.fury_hymn.DAMAGE_BONUS), pct(T.fury_hymn.SPEED_BONUS), T.fury_hymn.RADIUS },
+    },
+    {
+        id = "ghost_protocol", bit = 9, tier = "elite", wait = "standby", circuits = { "chorusbox", "rangebooster" },
+        values = { T.ghost_protocol.STILL_TIME, pct(T.ghost_protocol.AMBUSH_MULT - 1), T.ghost_protocol.STILL_TIME_DARK },
+    },
+    {
+        id = "phoenix_protocol", bit = 10, tier = "elite", circuits = { "hardy", "thermal" },
+        values = { pct(T.phoenix_protocol.TRIGGER_PERCENT), pct(T.phoenix_protocol.REVIVE_PERCENT), math.floor(T.phoenix_protocol.COOLDOWN / 60 + 0.5), T.phoenix_protocol.INVINCIBLE, T.phoenix_protocol.DAMAGE, T.phoenix_protocol.RADIUS },
+    },
+    {
+        id = "tractor_beam", bit = 11, tier = "elite", circuits = { "spatializer", "rangebooster" },
+        values = { T.tractor_beam.RADIUS },
+    },
+}
+
+function M.IsElite(res)
+    return res.tier == "elite"
 }
 
 --------------------------------------------------------------------------
@@ -106,10 +148,12 @@ M.RESONANCES = {
 --------------------------------------------------------------------------
 function M.GetAvailable(is_enabled)
     local list = {}
+    local elite_enabled = is_enabled(M.ELITE_OPTION)
+
     for _, res in ipairs(M.RESONANCES) do
         local a = M.CIRCUITS[res.circuits[1]]
         local b = M.CIRCUITS[res.circuits[2]]
-        if is_enabled(a.config) and is_enabled(b.config) then
+        if (elite_enabled or not M.IsElite(res)) and is_enabled(a.config) and is_enabled(b.config) then
             list[#list + 1] = res
         end
     end
