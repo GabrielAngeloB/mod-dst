@@ -1,12 +1,11 @@
 name = "D'WX-78 Improved Circuits"
 description = "DST rework and quality-of-life changes for WX-78 circuits.\n" ..
-"• Resonance: small bonuses for six active circuit pairs, with an optional HUD.\n" ..
-"• Redigestion: reduces negative health, hunger and sanity effects from food.\n" ..
-"• Blocking, Hardy, Processing, Chorusbox and other circuit adjustments.\n" ..
+"• Resonance: six standard bonuses plus six optional elite effects for specific active circuit pairs, with an optional HUD.\n" ..
+"• Redigestion, Blocking, Hardy, Processing, Chorusbox and other circuit adjustments.\n" ..
 "• Drone, scanning, recipes and world-system improvements."
 
 author = "Deurus"
-version = "0.1.41"
+version = "0.1.42"
 forumthread = ""
 
 api_version = 10
@@ -121,6 +120,7 @@ configuration_options =
 
     BinaryConfig("resonance", "Circuit Resonance", "Enables/Disables the small bonuses gained when specific circuit pairs are active together (needs the circuits' own options enabled).", true),
     BinaryConfig("resonance_hud", "Resonance HUD", "Shows/Hides the on-screen panel listing the active resonances and their effects.", true),
+    BinaryConfig("resonance_elite", "Elite Resonances", "Enables/Disables the six powerful elite resonances. Requires Circuit Resonance and the two circuit options for each pair.", true),
 
     SkipSpace(),
 

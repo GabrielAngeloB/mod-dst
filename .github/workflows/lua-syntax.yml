@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - "fix/**"
+      - "feature/**"
   pull_request:
   workflow_dispatch:
 
@@ -31,3 +32,6 @@ jobs:
 
       - name: Test Take Your Time in the restricted DST mod environment
         run: lua5.1 tests/take_your_time_sandbox.lua
+
+      - name: Test resonance definitions, localizations and Ghost Protocol
+        run: lua5.1 tests/resonance_elite.lua

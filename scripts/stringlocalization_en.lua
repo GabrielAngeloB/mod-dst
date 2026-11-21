@@ -116,6 +116,9 @@ return {
         TITLE = "CIRCUIT RESONANCE",
         SPEECH_ON = "RESONANCE ONLINE: %s",
         SPEECH_OFF = "RESONANCE LOST: %s",
+        SPEECH_TRIGGER = "%s!",
+        STATE_RECHARGING = "RECHARGING",
+        STATE_STANDBY = "STANDBY",
         SCRAPBOOK_HEADER = "Circuit Resonance: with both circuits of a pair plugged in, powered and unlocked by their skills, a small extra bonus is gained.",
         SCRAPBOOK_LINE = "- %s (with %s): %s",
 
@@ -129,6 +132,7 @@ return {
             blocking = "Blocking Circuit",
             hardy = "Hardy Circuit",
             illumination = "Illumination Circuit",
+            spatializer = "Spatializer Circuit",
         },
 
         ENTRIES = {
@@ -161,6 +165,36 @@ return {
                 NAME = "HEARTH GLOW",
                 SHORT = "-%s%% hunger drain at night and in the caves.",
                 DESC = "Warm light keeps the chassis efficient: hunger drains %s%% slower at night and in the caves.",
+            },
+            absolute_zero = {
+                NAME = "ABSOLUTE ZERO",
+                SHORT = "When a block that absorbed hits ends, a frost wave freezes the enemies around you.",
+                DESC = "Block at least one hit: when the shield drops, a wave of absolute zero freezes every enemy within %s range. The more damage the shield absorbed, the harder they freeze (bosses are only chilled). At most once every %s seconds.",
+            },
+            supernova = {
+                NAME = "SUPERNOVA",
+                SHORT = "While overclocked, the sonic wave detonates your stored heat, hurting and pushing back nearby enemies.",
+                DESC = "Using the sonic wave while overclocked (%s degrees or more) detonates the stored heat: enemies within %s range take %s damage (+%s with two or more heat modules) and are pushed back, and your body temperature drops. At most once every %s seconds.",
+            },
+            fury_hymn = {
+                NAME = "FURY HYMN",
+                SHORT = "While overclocked: allies near you gain +%s%% damage and +%s%% speed.",
+                DESC = "While you are overclocked, the chorus rallies everyone near you: allies gain +%s%% damage and +%s%% movement speed (you get the speed bonus too), within %s range.",
+            },
+            ghost_protocol = {
+                NAME = "GHOST PROTOCOL",
+                SHORT = "Stand still for %s seconds: creatures lose track of you and your first attack hits for +%s%% damage.",
+                DESC = "After standing still for %s seconds, nearby creatures forget you and your next attack deals +%s%% damage (only %s seconds are needed at night and in the caves). Moving, attacking or being hit breaks the effect.",
+            },
+            phoenix_protocol = {
+                NAME = "PHOENIX PROTOCOL",
+                SHORT = "When health falls below %s%%: recover to %s%% and blast nearby enemies (once every %s minutes).",
+                DESC = "When health falls below %s%%, WX-78 is restored to %s%% health, at most once every %s minutes. You become invulnerable for %s seconds and a heat burst deals %s damage to enemies within %s range.",
+            },
+            tractor_beam = {
+                NAME = "TRACTOR BEAM",
+                SHORT = "Loot dropped by your kills flies straight into your inventory.",
+                DESC = "Items dropped by creatures you kill, within %s range of the kill, are pulled into your inventory (into the Spatializer's storage when the pack is full). Items that were already on the ground are never touched.",
             },
         },
     },

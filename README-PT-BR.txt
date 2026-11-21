@@ -1,5 +1,30 @@
-D'WX-78 IMPROVED CIRCUITS — DST 0.1.41
+D'WX-78 IMPROVED CIRCUITS — DST 0.1.42
 ======================================
+
+NOVIDADES 0.1.42 — RESSONÂNCIAS ELITE
+Seis ressonâncias novas, mais fortes que as seis padrão. Os requisitos continuam
+sendo módulo ativo + skill + carga, mas cada uma tem gatilho e/ou cooldown.
+Todas podem ser desligadas em grupo pela opção "Elite Resonances".
+- ZERO ABSOLUTO (Refrigerante + Bloqueio): quando um bloqueio que absorveu
+  golpes termina, uma onda de gelo (raio 9) congela inimigos; mais dano absorvido
+  pelo escudo aumenta o congelamento. Cooldown de 30 s.
+- SUPERNOVA (Térmico + Sônico): usar a onda sônica em overclock (65 graus ou
+  mais) detona o calor: 60 de dano (+30 com 2 ou mais módulos de calor), empurra
+  inimigos em raio 8 e reduz sua temperatura. Cooldown de 25 s.
+- HINO DE FÚRIA (Térmico + Chorusbox): em overclock, aliados em raio 14 ganham
+  +12% de dano e +10% de velocidade; WX-78 também ganha velocidade.
+- PROTOCOLO FANTASMA (Chorusbox + Range Booster): parado por 3 s (2 s à noite
+  ou nas cavernas), criaturas perdem você de vista e seu próximo ataque causa
+  +50% de dano. Mover, atacar ou ser atingido quebra o efeito.
+- PROTOCOLO FÊNIX (Robusto + Térmico): abaixo de 12% de vida, recupera para
+  40%, fica invulnerável por 3 s e explode inimigos próximos (50 de dano, raio 7).
+  Uma vez a cada 8 minutos.
+- RAIO TRATOR (Spatializer + Range Booster): o saque de criaturas que você
+  mata (raio 9) é puxado para seu inventário ou armazenamento especial. O chão
+  é registrado antes do golpe; itens que já estavam lá são preservados.
+No HUD, elites aparecem em dourado e ficam cinza, com um rótulo, enquanto
+recarregam ou aguardam uma condição.
+
 
 CORREÇÃO DE HOTFIX 0.1.41
 - Corrigido o carregamento das definições de Ressonância em ambientes
@@ -38,8 +63,8 @@ REVISÃO DE COMPATIBILIDADE E CORREÇÕES
   arquivos .lua do repositório.
 
 RESSONÂNCIAS E BALANCEAMENTO
-- Os seis pares e seus valores de balanceamento foram preservados.
-- Nenhuma ressonância foi adicionada ou removida.
+- As seis ressonâncias padrão e seus valores de balanceamento foram preservados.
+- A versão 0.1.42 acrescenta seis ressonâncias elite, controladas pela opção resonance_elite.
 - Fuel Oil permanece desativado porque seus três arquivos de implementação
   não existem no pacote-fonte.
 
